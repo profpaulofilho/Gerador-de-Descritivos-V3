@@ -1,19 +1,19 @@
-# Gerador de Descritivos V3 — SENAI Bahia
+# Gerador de Descritivos V3 - SENAI Bahia
 
-Aplicação Next.js para Vercel com:
+Aplicação Next.js para Vercel com layout moderno, login Firebase e API Anthropic protegida.
 
-- Login por Firebase Authentication (e-mail/senha)
-- API segura server-side para Anthropic/Claude
-- Gerador de Descritivos de Curso
-- Gerador de Ficha de Produto
-- Upload de documentos `.docx`, `.pdf` e `.txt`
-- EJA Profissionalizante como atribuição simples, com regras internas no prompt
-- Conteúdo atualizado de Aprender a Empreender
-- Layout moderno com identidade SENAI
+## Recursos
 
-## Variáveis de ambiente
+- Login com Firebase Authentication por e-mail/senha
+- Geração de Descritivo de Curso
+- Geração de Ficha de Produto
+- Upload de referência em DOCX, PDF e TXT
+- EJA Profissionalizante como botão simples
+- Aprender a Empreender atualizado
+- Geração de DOCX no navegador
+- Chave Anthropic protegida em rota server-side `/api/generate`
 
-Configure na Vercel em **Project Settings > Environment Variables**:
+## Variáveis de ambiente na Vercel
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...
@@ -27,21 +27,24 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
 ```
 
-## Rodar localmente
+## Publicação na Vercel
 
-```bash
-npm install
-cp .env.example .env.local
-npm run dev
-```
+1. Suba o conteúdo desta pasta para a raiz do repositório GitHub.
+2. Na Vercel, use Framework Preset: Next.js.
+3. Build Command: `npm run build`.
+4. Install Command: `npm install`.
+5. Output Directory: deixe vazio.
+6. Configure as variáveis de ambiente.
+7. Faça Redeploy.
 
-## Deploy
+## Firebase
 
-1. Suba estes arquivos no GitHub.
-2. Importe o repositório na Vercel.
-3. Configure as variáveis de ambiente.
-4. Faça Deploy.
+1. Abra Firebase Console.
+2. Crie ou use um projeto existente.
+3. Ative Authentication > Sign-in method > Email/Password.
+4. Crie um usuário.
+5. Copie o firebaseConfig do app Web para as variáveis `NEXT_PUBLIC_FIREBASE_*`.
 
 ## Segurança
 
-A chave da Anthropic não fica no navegador. A chamada ao Claude acontece em `app/api/generate/route.ts`.
+Não coloque a chave da Anthropic no frontend. Use apenas `ANTHROPIC_API_KEY` nas variáveis de ambiente da Vercel.
