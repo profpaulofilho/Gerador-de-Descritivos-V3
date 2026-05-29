@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENAI Bahia — Gerador de Descritivos & Fichas de Produto</title>
+
+<!-- docx library inline (importado via CDN fallback ou local) -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+/* ═══════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════ */
+:root {
+  --red: #C8102E;
+  --red-dark: #a00d24;
+  --blue: #1F3864;
+  --orange: #E55A00;
+
+  /* DARK theme (default) */
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #1c2333;
+  --bg4: #242c3d;
+  --border: rgba(255,255,255,.08);
+  --border2: rgba(255,255,255,.14);
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --text3: #6e7681;
+  --card-bg: #161b22;
+  --card-border: rgba(255,255,255,.08);
+  --input-bg: #0d1117;
+  --input-border: rgba(255,255,255,.12);
+  --input-focus: rgba(200,16,46,.4);
+  --header-bg: rgba(13,17,23,.9);
+  --toggle-off: #30363d;
+  --toggle-thumb: #8b949e;
+  --tag-bg: rgba(255,255,255,.07);
+  --shadow: 0 4px 24px rgba(0,0,0,.4);
+  --label: #8b949e;
+  --section-bg: rgba(255,255,255,.03);
+  --btn-ghost-border: rgba(255,255,255,.15);
+  --btn-ghost-text: #e6edf3;
+  --step-done: rgba(200,16,46,.2);
+  --step-active-bg: var(--red);
+  --step-line: rgba(255,255,255,.1);
+  --resumo-bg: rgba(255,255,255,.04);
+  --log-bg: #0d1117;
+  --preview-bg: rgba(255,255,255,.03);
+  --drop-border: rgba(255,255,255,.15);
+  --drop-hover: rgba(200,16,46,.08);
+}
+
+[data-theme="light"] {
+  --bg: #f0f2f5;
+  --bg2: #ffffff;
+  --bg3: #f5f7fa;
+  --bg4: #eaecf0;
+  --border: rgba(0,0,0,.08);
+  --border2: rgba(0,0,0,.14);
+  --text: #1a2540;
+  --text2: #4a5568;
+  --text3: #718096;
+  --card-bg: #ffffff;
+  --card-border: rgba(0,0,0,.08);
+  --input-bg: #ffffff;
+  --input-border: rgba(0,0,0,.12);
+  --input-focus: rgba(200,16,46,.3);
+  --header-bg: rgba(255,255,255,.92);
+  --toggle-off: #cbd5e0;
+  --toggle-thumb: #718096;
+  --tag-bg: rgba(0,0,0,.05);
+  --shadow: 0 4px 24px rgba(0,0,0,.1);
+  --label: #4a5568;
+  --section-bg: rgba(0,0,0,.02);
+  --btn-ghost-border: rgba(0,0,0,.15);
+  --btn-ghost-text: #1a2540;
+  --step-done: rgba(200,16,46,.15);
+  --step-line: rgba(0,0,0,.1);
+  --resumo-bg: rgba(0,0,0,.03);
+  --log-bg: #f5f7fa;
+  --preview-bg: rgba(0,0,0,.02);
+  --drop-border: rgba(0,0,0,.15);
+  --drop-hover: rgba(200,16,46,.05);
+}
+
+/* ═══════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;transition:background .3s,color .3s}
+
+/* ═══════════════════════════════════════
+   HEADER
+═══════════════════════════════════════ */
+header{
+  position:sticky;top:0;z-index:100;
+  background:var(--header-bg);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  height:62px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;
+}
+.header-left{display:flex;align-items:center;gap:14px}
+.header-logo{height:36px;width:auto}
+.header-divider{width:1px;height:28px;background:var(--border2)}
+.header-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.3px}
+.header-sub{font-size:11px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-top:1px}
+
+/* Mode selector */
+.mode-tabs{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
+.mode-tab{
+  padding:5px 14px;border-radius:6px;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;letter-spacing:.3px;
+  background:transparent;color:var(--text2);transition:all .2s;
+  white-space:nowrap;
+}
+.mode-tab.active{background:var(--red);color:#fff}
+
+/* Steps bar */
+.steps{display:flex;align-items:center;gap:0}
+.step-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.step-dot{
+  width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--text3);
+  transition:all .25s;background:var(--bg3);
+}
+.step-dot.active{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 0 4px rgba(200,16,46,.2)}
+.step-dot.done{background:var(--step-done);border-color:rgba(200,16,46,.4);color:var(--red)}
+.step-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.6px;text-transform:uppercase;transition:color .25s}
+.step-label.active{color:var(--red)}
+.step-line{width:32px;height:2px;background:var(--step-line);margin:0 2px;margin-bottom:18px;transition:background .25s}
+.step-line.done{background:rgba(200,16,46,.3)}
+
+/* Theme toggle */
+.theme-btn{
+  border:1px solid var(--border2);background:var(--bg3);
+  border-radius:8px;padding:6px 12px;cursor:pointer;
+  font-size:12px;color:var(--text2);
+  display:flex;align-items:center;gap:6px;
+  transition:all .2s;white-space:nowrap;
+}
+.theme-btn:hover{border-color:var(--border2);color:var(--text)}
+
+/* ═══════════════════════════════════════
+   MAIN
+═══════════════════════════════════════ */
+main{flex:1;padding:28px 24px;max-width:900px;margin:0 auto;width:100%}
+
+.page{display:none}
+.page.active{display:block}
+
+/* ═══════════════════════════════════════
+   CARD / CARD-SECTION
+═══════════════════════════════════════ */
+.card{
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:14px;
+  padding:22px 24px;
+  margin-bottom:16px;
+  box-shadow:var(--shadow);
+}
+.card-title{
+  font-size:11px;font-weight:700;color:var(--text3);
+  letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:18px;padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════
+   PAGE HEADING
+═══════════════════════════════════════ */
+.page-head{text-align:center;margin-bottom:24px}
+.page-head h1{font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px}
+.page-head .subtitle{font-size:13px;color:var(--text2)}
+
+/* ═══════════════════════════════════════
+   FORM FIELDS
+═══════════════════════════════════════ */
+.field{margin-bottom:14px}
+.field label{
+  display:block;font-size:11px;font-weight:600;
+  color:var(--label);letter-spacing:.8px;text-transform:uppercase;
+  margin-bottom:6px;
+}
+.field input,.field select,.field textarea{
+  width:100%;padding:9px 12px;
+  background:var(--input-bg);
+  border:1px solid var(--input-border);
+  border-radius:8px;color:var(--text);
+  font-size:13px;font-family:inherit;
+  transition:border .2s,box-shadow .2s;
+  outline:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:rgba(200,16,46,.5);
+  box-shadow:0 0 0 3px var(--input-focus);
+}
+.field textarea{resize:vertical;min-height:70px}
+.field-row{display:grid;gap:12px}
+.cols2{grid-template-columns:1fr 1fr}
+.cols3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:600px){.cols2,.cols3{grid-template-columns:1fr}}
+
+/* ═══════════════════════════════════════
+   TOGGLE SWITCH
+═══════════════════════════════════════ */
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:8px;
+  transition:border .2s;
+}
+.toggle-row:hover{border-color:var(--border2)}
+.toggle-row-info .name{font-size:14px;font-weight:600;color:var(--text)}
+.toggle-row-info .desc{font-size:12px;color:var(--text2);margin-top:2px}
+.toggle-row-right{display:flex;align-items:center;gap:8px}
+.badge{
+  padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700;
+  background:rgba(200,16,46,.15);color:var(--red);
+  letter-spacing:.3px;
+}
+.badge-updated{background:rgba(229,90,0,.15);color:var(--orange)}
+
+.toggle{position:relative;display:inline-block;width:44px;height:24px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;cursor:pointer;inset:0;
+  background:var(--toggle-off);border-radius:24px;transition:.25s;
+  border:1px solid var(--border2);
+}
+.toggle-slider:before{
+  content:'';position:absolute;
+  width:18px;height:18px;left:2px;top:2px;
+  background:var(--toggle-thumb);border-radius:50%;transition:.25s;
+}
+.toggle input:checked+.toggle-slider{background:rgba(200,16,46,.25);border-color:rgba(200,16,46,.4)}
+.toggle input:checked+.toggle-slider:before{background:var(--red);transform:translateX(20px)}
+
+/* ═══════════════════════════════════════
+   RESUMO BAR
+═══════════════════════════════════════ */
+.resumo-bar{
+  display:flex;flex-wrap:wrap;gap:8px;
+  background:var(--resumo-bg);
+  border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;margin-bottom:18px;
+}
+.resumo-item{display:flex;gap:6px;align-items:center}
+.resumo-item .key{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px}
+.resumo-item .val{font-size:12px;font-weight:600;color:var(--text);background:var(--tag-bg);padding:2px 8px;border-radius:5px}
+
+/* ═══════════════════════════════════════
+   DROP ZONE
+═══════════════════════════════════════ */
+.drop-zone{
+  border:2px dashed var(--drop-border);border-radius:14px;
+  padding:48px 32px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--card-bg);
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--red);background:var(--drop-hover);
+}
+.drop-zone-icon{font-size:44px;margin-bottom:12px;line-height:1}
+.drop-zone h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+.drop-zone p{font-size:13px;color:var(--text2);margin-bottom:14px}
+.drop-zone .formats{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.format-tag{
+  padding:3px 10px;border-radius:5px;
+  font-size:11px;font-weight:600;
+  background:var(--tag-bg);color:var(--text2);
+  border:1px solid var(--border);
+}
+.doc-preview{
+  margin-top:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+.doc-preview-label{
+  background:var(--section-bg);padding:8px 14px;
+  font-size:11px;font-weight:700;color:var(--text3);
+  letter-spacing:.8px;text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.doc-preview-text{
+  padding:14px;font-size:12px;line-height:1.6;
+  color:var(--text2);max-height:140px;overflow-y:auto;
+  white-space:pre-wrap;
+  background:var(--preview-bg);
+}
+.doc-success{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:rgba(0,180,0,.07);
+  border:1px solid rgba(0,180,0,.15);border-radius:8px;margin-top:12px;
+}
+.doc-success-icon{font-size:18px}
+.doc-success-name{font-size:13px;font-weight:600;color:#4ade80}
+
+/* ═══════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════ */
+.row-btns{display:flex;justify-content:space-between;align-items:center;margin-top:20px;flex-wrap:wrap;gap:8px}
+.row-btns-right{display:flex;gap:8px;flex-wrap:wrap}
+.btn-ghost{
+  padding:9px 18px;border-radius:8px;cursor:pointer;
+  background:transparent;
+  border:1px solid var(--btn-ghost-border);
+  color:var(--btn-ghost-text);
+  font-size:13px;font-weight:600;transition:all .2s;
+}
+.btn-ghost:hover{border-color:var(--border2)}
+.btn-red{
+  padding:9px 20px;border-radius:8px;cursor:pointer;
+  background:var(--red);border:none;color:#fff;
+  font-size:13px;font-weight:700;transition:all .2s;
+  display:flex;align-items:center;gap:7px;
+}
+.btn-red:hover:not(:disabled){background:var(--red-dark)}
+.btn-red:disabled{opacity:.4;cursor:not-allowed}
+.btn-download{
+  padding:9px 20px;border-radius:8px;
+  background:rgba(200,16,46,.12);
+  border:1px solid rgba(200,16,46,.3);
+  color:var(--red);text-decoration:none;
+  font-size:13px;font-weight:700;
+  display:inline-flex;align-items:center;gap:7px;
+  transition:all .2s;cursor:pointer;
+}
+.btn-download:hover{background:rgba(200,16,46,.2)}
+
+/* ═══════════════════════════════════════
+   RESULT / LOG
+═══════════════════════════════════════ */
+.log-box{
+  background:var(--log-bg);border:1px solid var(--border);
+  border-radius:10px;padding:16px;max-height:280px;overflow-y:auto;
+  font-size:12px;font-family:'Courier New',monospace;
+  color:var(--text2);line-height:1.7;margin-top:16px;
+}
+.log-box .log-ok{color:#4ade80}
+.log-box .log-err{color:#f87171}
+.log-box .log-info{color:#60a5fa}
+
+.spinner{
+  width:44px;height:44px;border:3px solid var(--border);
+  border-top-color:var(--red);border-radius:50%;
+  animation:spin .8s linear infinite;margin:32px auto;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.result-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+
+/* ═══════════════════════════════════════
+   UC ROWS
+═══════════════════════════════════════ */
+.uc-rows{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.uc-row{display:flex;gap:8px;align-items:center}
+.uc-row input{flex:1;padding:7px 10px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:7px;color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.uc-row input:focus{border-color:rgba(200,16,46,.5)}
+.uc-row .ch-inp{flex:0 0 72px}
+.uc-row .btn-rm{padding:4px 10px;background:transparent;border:1px solid rgba(200,16,46,.2);border-radius:6px;color:var(--red);cursor:pointer;font-size:13px}
+.btn-add-uc{margin-top:8px;background:transparent;border:1px dashed var(--border2);border-radius:7px;padding:6px 14px;color:var(--text2);font-size:12px;cursor:pointer;width:100%;transition:all .2s}
+.btn-add-uc:hover{border-color:var(--red);color:var(--red)}
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+footer{border-top:1px solid var(--border);padding:14px 24px;text-align:center;background:var(--bg2)}
+footer .foot-txt{font-size:11px;color:var(--text3);letter-spacing:.4px}
+footer .foot-txt strong{color:var(--text2)}
+
+/* ═══════════════════════════════════════
+   MODAL CONFIRM
+═══════════════════════════════════════ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;display:none}
+.modal-bg.show{display:flex}
+.modal{background:var(--card-bg);border:1px solid var(--border2);border-radius:14px;padding:24px;max-width:400px;width:90%;box-shadow:var(--shadow)}
+
+/* Responsivo header */
+@media(max-width:700px){
+  .header-sub{display:none}
+  .mode-tabs{display:none}
+  .header-title{font-size:12px}
+  .steps{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     HEADER
+═══════════════════════════════════════ -->
+<header>
+  <div class="header-left">
+    <!-- LOGO SENAI real via SVG inline -->
+    <svg class="header-logo" viewBox="0 0 160 54" xmlns="http://www.w3.org/2000/svg">
+      <text x="0" y="42" font-family="Arial Black,sans-serif" font-size="46" font-weight="900" fill="#1B3F8F">SENAI</text>
+      <!-- acento laranja no "i" -->
+      <rect x="147" y="5" width="10" height="7" rx="2" fill="#E55A00"/>
+    </svg>
+    <div class="header-divider"></div>
+    <div>
+      <div class="header-title">SENAI BAHIA</div>
+      <div class="header-sub">Gerador de Descritivos &amp; Fichas de Produto</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px">
+    <!-- Seletor de modo -->
+    <div class="mode-tabs" id="modeTabs">
+      <button class="mode-tab active" onclick="setAppMode('descritivo')" id="tabDesc">📄 Descritivo</button>
+      <button class="mode-tab" onclick="setAppMode('ficha')" id="tabFicha">🗂️ Ficha de Produto</button>
+    </div>
+
+    <!-- Steps (só descritivo) -->
+    <div class="steps" id="stepsBar">
+      <div class="step-wrap">
+        <div class="step-dot active" id="dot1">1</div>
+        <div class="step-label active" id="lbl1">Dados</div>
+      </div>
+      <div class="step-line" id="line1"></div>
+      <div class="step-wrap">
+        <div class="step-dot" id="dot2">2</div>
+        <div class="step-label" id="lbl2">Documento</div>
+      </div>
+      <div class="step-line" id="line2"></div>
+      <div class="step-wrap">
+        <div class="step-dot" id="dot3">3</div>
+        <div class="step-label" id="lbl3">Resultado</div>
+      </div>
+    </div>
+
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️ Modo claro</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════════════════════════════════════
+     PAGE 1 — DADOS DO CURSO
+═══════════════════════════════════════ -->
+<div class="page active" id="page1">
+  <div class="page-head">
+    <h1>Dados do Curso</h1>
+    <div class="subtitle">Preencha as informações que aparecerão no documento</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Identificação</div>
+    <div class="field">
+      <label>Nome do Curso *</label>
+      <input id="nomeCurso" placeholder="Ex: Assistente em Tecnologias da Indústria 4.0" oninput="checkStep1()">
+    </div>
+    <div class="field-row cols2">
+      <div class="field">
+        <label>Carga Horária Total *</label>
+        <input id="cargaHoraria" placeholder="Ex: 200h" oninput="checkStep1()">
+      </div>
+      <div class="field">
+        <label>CBO – Ocupação</label>
+        <input id="cbo" placeholder="Ex: 3172-05 – Agente de Inclusão Digital">
+      </div>
+    </div>
+    <div class="field-row cols2">
+      <div class="field">
+        <label>Modalidade</label>
+        <select id="modalidade">
+          <option>Qualificação Profissional</option>
+          <option>Aprendizagem Industrial</option>
+          <option>Aperfeiçoamento Profissional</option>
+          <option>Habilitação Profissional</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Eixo Tecnológico</label>
+        <select id="eixo">
+          <option>Ambiente e Saúde</option>
+          <option>Controle e Processos Industriais</option>
+          <option>Gestão e Negócios</option>
+          <option>Informação e Comunicação</option>
+          <option>Infraestrutura</option>
+          <option>Produção Alimentícia</option>
+          <option>Produção Cultural e Design</option>
+          <option>Produção Industrial</option>
+          <option>Recursos Naturais</option>
+          <option>Segurança</option>
+          <option>Turismo, Hospitalidade e Lazer</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row cols3">
+      <div class="field">
+        <label>Escolaridade Mínima</label>
+        <select id="escolaridade">
+          <option>Ensino Fundamental I completo</option>
+          <option>Ensino Fundamental II completo</option>
+          <option selected>Ensino Médio incompleto</option>
+          <option>Ensino Médio completo</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Idade Mínima</label>
+        <input id="idadeMinima" value="16" placeholder="16">
+      </div>
+      <div class="field">
+        <label>Cliente</label>
+        <input id="cliente" placeholder="Opcional">
+      </div>
+    </div>
+    <div class="field">
+      <label>Outros Requisitos</label>
+      <input id="req" placeholder="Opcional">
+    </div>
+  </div>
+
+  <!-- MÓDULOS OPCIONAIS -->
+  <div class="card">
+    <div class="card-title">Módulos Opcionais</div>
+
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <div class="name">Módulo Básico</div>
+        <div class="desc">Sustentabilidade · SST · Qualidade · Indústria 4.0</div>
+      </div>
+      <div class="toggle-row-right">
+        <span class="badge">+40h</span>
+        <label class="toggle"><input type="checkbox" id="chkModBasico" onchange="checkStep1()"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <div class="name">Aprender a Empreender</div>
+        <div class="desc">Conteúdo atualizado — empreendedorismo digital e mobile</div>
+      </div>
+      <div class="toggle-row-right">
+        <span class="badge badge-updated">● ATUALIZADO</span>
+        <select id="selEmpreender" style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;margin-right:4px" onchange="checkStep1()">
+          <option value="16">+16h</option>
+          <option value="24" selected>+24h</option>
+          <option value="32">+32h</option>
+          <option value="40">+40h</option>
+        </select>
+        <label class="toggle"><input type="checkbox" id="chkEmpreender" onchange="checkStep1()"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- EJA — só botão toggle, sem parâmetros visíveis -->
+  <div class="card">
+    <div class="card-title">Modalidade Especial</div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <div class="name">EJA Profissionalizante <span style="font-size:11px;background:rgba(96,165,250,.15);color:#60a5fa;border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:middle">● Vinculada à Qualificação</span></div>
+        <div class="desc">Integração Ensino Médio + Qualificação · 18 anos · 80% presencial</div>
+      </div>
+      <div class="toggle-row-right">
+        <label class="toggle"><input type="checkbox" id="chkEja" onchange="checkStep1()"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPÇÕES DE UC -->
+  <div class="card">
+    <div class="card-title">Unidades Curriculares (Opcional)</div>
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text2)">
+        <input type="checkbox" id="chkNumUC" onchange="toggleNumUC()"> Definir quantidade de UCs
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text2)">
+        <input type="checkbox" id="chkNomesUC" onchange="toggleNomesUC()"> Definir nomes das UCs
+      </label>
+    </div>
+    <div id="numUCArea" style="display:none;margin-bottom:10px">
+      <div class="field">
+        <label>Número de UCs Técnicas</label>
+        <input type="number" id="numUC" value="3" min="1" max="12" style="width:100px">
+      </div>
+    </div>
+    <div id="nomesUCArea" style="display:none">
+      <div class="uc-rows" id="ucRows"></div>
+      <button class="btn-add-uc" onclick="addUCRow()">+ Adicionar UC</button>
+    </div>
+  </div>
+
+  <div class="row-btns">
+    <div></div>
+    <button class="btn-red" id="btnStep2" disabled onclick="goStep(2)">Próximo →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PAGE 2 — DOCUMENTO NORTEADOR
+═══════════════════════════════════════ -->
+<div class="page" id="page2">
+  <div class="page-head">
+    <h1>Documento Norteador</h1>
+    <div class="subtitle">Envie o itinerário nacional, DCN ou catálogo da área (opcional)</div>
+  </div>
+
+  <div id="resumoBar" class="resumo-bar"></div>
+
+  <div class="card">
+    <div
+      class="drop-zone" id="dropZone"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)"
+    >
+      <div class="drop-zone-icon">📁</div>
+      <h3>Arraste o arquivo aqui</h3>
+      <p>ou clique para selecionar</p>
+      <div class="formats">
+        <span class="format-tag">.docx</span>
+        <span class="format-tag">.pdf</span>
+        <span class="format-tag">.txt</span>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept=".docx,.pdf,.txt" style="display:none" onchange="handleFile(this.files[0])">
+
+    <div id="docSuccess" style="display:none"></div>
+
+    <div id="previewArea" style="display:none">
+      <div class="doc-preview">
+        <div class="doc-preview-label">
+          <span>Prévia extraída</span>
+          <button onclick="clearDoc()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">✕ Remover</button>
+        </div>
+        <div class="doc-preview-text" id="previewText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row-btns">
+    <button class="btn-ghost" onclick="goStep(1)">← Voltar</button>
+    <div class="row-btns-right">
+      <button class="btn-ghost" id="btnSemDoc" onclick="semDoc()">Continuar sem documento</button>
+      <button class="btn-red" id="btnGerar" disabled onclick="goStep(3);gerar()">⚡ Gerar Descritivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PAGE 3 — RESULTADO DESCRITIVO
+═══════════════════════════════════════ -->
+<div class="page" id="page3">
+  <div style="text-align:center;margin-bottom:24px">
+    <h1 id="resultTitle">Gerando Descritivo...</h1>
+    <div class="subtitle" id="resultSub">O agente está criando o conteúdo técnico completo</div>
+  </div>
+  <div style="text-align:center" id="spinnerArea"><div class="spinner"></div></div>
+  <div id="resultIcon" style="text-align:center;display:none;font-size:60px;margin-bottom:16px"></div>
+  <div class="log-box" id="logBox"></div>
+  <div class="result-btns" id="resultBtns" style="display:none">
+    <a id="btnDownload" class="btn-download" style="display:none">📥 Baixar Descritivo</a>
+    <button class="btn-ghost" onclick="resetAll()">🔄 Criar novo</button>
+    <button class="btn-ghost" id="btnRetry" style="display:none;border-color:rgba(200,16,46,.2);color:var(--red)" onclick="gerar()">↩ Tentar novamente</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PAGE FICHA — FICHA DE PRODUTO
+═══════════════════════════════════════ -->
+<div class="page" id="pageFicha">
+  <div class="page-head">
+    <h1>Ficha de Produto</h1>
+    <div class="subtitle">Gera a ficha no padrão SENAI com programação e informações do curso</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dados do Produto</div>
+    <div class="field">
+      <label>Nome do Curso / Produto *</label>
+      <input id="f_nome" placeholder="Ex: Criação de Prompts e Agentes de IA Especialistas" oninput="checkFicha()">
+    </div>
+    <div class="field-row cols2">
+      <div class="field">
+        <label>Carga Horária *</label>
+        <input id="f_ch" placeholder="Ex: 80 horas" oninput="checkFicha()">
+      </div>
+      <div class="field">
+        <label>Modalidade</label>
+        <select id="f_modalidade">
+          <option>Aperfeiçoamento Profissional</option>
+          <option>Qualificação Profissional</option>
+          <option>Aprendizagem Industrial</option>
+          <option>Habilitação Profissional</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row cols2">
+      <div class="field">
+        <label>Eixo Tecnológico</label>
+        <select id="f_eixo">
+          <option>Ambiente e Saúde</option>
+          <option>Controle e Processos Industriais</option>
+          <option>Gestão e Negócios</option>
+          <option selected>Informação e Comunicação</option>
+          <option>Infraestrutura</option>
+          <option>Produção Alimentícia</option>
+          <option>Produção Cultural e Design</option>
+          <option>Produção Industrial</option>
+          <option>Recursos Naturais</option>
+          <option>Segurança</option>
+          <option>Turismo, Hospitalidade e Lazer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Público-Alvo</label>
+        <input id="f_publico" placeholder="Ex: Profissionais e estudantes das áreas de TI">
+      </div>
+    </div>
+    <div class="field">
+      <label>Certificado emitido</label>
+      <input id="f_cert" placeholder="Ex: Certificado de Aperfeiçoamento Profissional em ...">
+    </div>
+    <div class="field">
+      <label>Frequência Mínima</label>
+      <input id="f_freq" value="75%" placeholder="75%">
+    </div>
+  </div>
+
+  <!-- ADICIONAR DOCUMENTO para ficha -->
+  <div class="card">
+    <div class="card-title">Documento de Referência (Opcional)</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Envie um documento com a programação, conteúdos ou estrutura do curso para que a IA extraia as informações automaticamente.</p>
+    <div
+      class="drop-zone" id="dropZoneFicha" style="padding:28px"
+      onclick="document.getElementById('fileInputFicha').click()"
+      ondragover="onDragOver(event,'dropZoneFicha')" ondragleave="onDragLeave(event,'dropZoneFicha')" ondrop="onDrop(event,'ficha')"
+    >
+      <div class="drop-zone-icon" style="font-size:32px">📎</div>
+      <h3 style="font-size:14px">Adicionar documento</h3>
+      <p style="font-size:12px">Programação, ficha existente, catálogo...</p>
+      <div class="formats">
+        <span class="format-tag">.docx</span>
+        <span class="format-tag">.pdf</span>
+        <span class="format-tag">.txt</span>
+      </div>
+    </div>
+    <input type="file" id="fileInputFicha" accept=".docx,.pdf,.txt" style="display:none" onchange="handleFileFicha(this.files[0])">
+    <div id="fichaDocSuccess" style="display:none"></div>
+    <div id="fichaPreviewArea" style="display:none">
+      <div class="doc-preview">
+        <div class="doc-preview-label">
+          <span>Prévia extraída</span>
+          <button onclick="clearDocFicha()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">✕ Remover</button>
+        </div>
+        <div class="doc-preview-text" id="fichaPreviewText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row-btns">
+    <div></div>
+    <button class="btn-red" id="btnGerarFicha" disabled onclick="gerarFicha()">⚡ Gerar Ficha de Produto</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PAGE FICHA RESULTADO
+═══════════════════════════════════════ -->
+<div class="page" id="pageFichaResult">
+  <div style="text-align:center;margin-bottom:24px">
+    <h1 id="fichaResultTitle">Gerando Ficha de Produto...</h1>
+    <div class="subtitle" id="fichaResultSub">A IA está estruturando a ficha no padrão SENAI</div>
+  </div>
+  <div style="text-align:center" id="fichaSpinner"><div class="spinner"></div></div>
+  <div id="fichaResultIcon" style="text-align:center;display:none;font-size:60px;margin-bottom:16px"></div>
+  <div class="log-box" id="fichaLogBox"></div>
+  <div class="result-btns" id="fichaResultBtns" style="display:none">
+    <a id="btnDownloadFicha" class="btn-download" style="display:none">📥 Baixar Ficha de Produto</a>
+    <button class="btn-ghost" onclick="resetFicha()">🔄 Criar nova ficha</button>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <div class="foot-txt">Criado por <strong>Paulo S. Filho</strong> &nbsp;·&nbsp; <a href="mailto:paulosilvafilhoba@gmail.com" style="color:var(--text2);text-decoration:none">paulosilvafilhoba@gmail.com</a> &nbsp;·&nbsp; © 2026</div>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════════════
+// GLOBALS
+// ══════════════════════════════════════════════════════
+let docText = "";
+let docFichaText = "";
+const AZUL = "1F3864", CINZA = "D9D9D9", BRANCO = "FFFFFF";
+let appMode = "descritivo"; // 'descritivo' | 'ficha'
+
+const API_KEY = "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";
+
+// ══════════════════════════════════════════════════════
+// THEME
+// ══════════════════════════════════════════════════════
+function toggleTheme(){
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = isDark ? '🌙 Modo escuro' : '☀️ Modo claro';
+}
+
+// ══════════════════════════════════════════════════════
+// APP MODE
+// ══════════════════════════════════════════════════════
+function setAppMode(mode){
+  appMode = mode;
+  document.getElementById('tabDesc').classList.toggle('active', mode==='descritivo');
+  document.getElementById('tabFicha').classList.toggle('active', mode==='ficha');
+  document.getElementById('stepsBar').style.display = mode==='descritivo' ? 'flex' : 'none';
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  if(mode === 'descritivo'){
+    document.getElementById('page1').classList.add('active');
+    goStep(1);
+  } else {
+    document.getElementById('pageFicha').classList.add('active');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// STEPS (Descritivo)
+// ══════════════════════════════════════════════════════
+function goStep(n){
+  [1,2,3].forEach(i => {
+    document.getElementById('page'+i).classList.toggle('active', i===n);
+    const dot = document.getElementById('dot'+i);
+    const lbl = document.getElementById('lbl'+i);
+    dot.className = 'step-dot' + (i<n?' done':i===n?' active':'');
+    lbl.className = 'step-label' + (i===n?' active':'');
+    if(i<3){ document.getElementById('line'+i).className = 'step-line' + (i<n?' done':''); }
+  });
+  if(n===2) buildResumo();
+}
+
+function buildResumo(){
+  const f = getForm();
+  let chLabel = f.cargaHoraria;
+  const extras = [];
+  if(f.usaModBasico) extras.push('Básico +40h');
+  if(f.usaEmpreender) extras.push('Empreender +'+f.chEmpreender+'h');
+  if(f.usaEja) extras.push('EJA');
+  if(extras.length) chLabel = f.chTotal+'h total ('+extras.join(' · ')+')';
+  const items = [['Curso',f.nomeCurso],['CH',chLabel],['Modalidade',f.modalidade]];
+  document.getElementById('resumoBar').innerHTML = items.map(([k,val])=>
+    `<div class="resumo-item"><div class="key">${k}</div><div class="val">${val||'—'}</div></div>`
+  ).join('');
+}
+
+function checkStep1(){
+  const nome = document.getElementById('nomeCurso').value.trim();
+  const ch   = document.getElementById('cargaHoraria').value.trim();
+  document.getElementById('btnStep2').disabled = !(nome && ch);
+}
+
+function getForm(){
+  const usaModBasico  = document.getElementById('chkModBasico').checked;
+  const usaEmpreender = document.getElementById('chkEmpreender').checked;
+  const chEmpreender  = usaEmpreender ? parseInt(document.getElementById('selEmpreender').value) : 0;
+  const usaEja        = document.getElementById('chkEja').checked;
+  const chBase = parseInt((v('cargaHoraria')||'0').replace(/[^0-9]/g,''))||0;
+  const usaNumUC  = document.getElementById('chkNumUC').checked;
+  const numUC     = usaNumUC ? parseInt(document.getElementById('numUC').value)||3 : null;
+  const usaNomesUC = document.getElementById('chkNomesUC').checked;
+  let nomesUC = [], chUCsDefinidas = 0;
+  if(usaNomesUC){
+    document.querySelectorAll('.uc-row').forEach(r=>{
+      const nome = r.querySelector('.uc-nome')?.value.trim();
+      const ch   = r.querySelector('.uc-ch')?.value.trim();
+      if(nome){ nomesUC.push({nome, ch: ch||'?'}); chUCsDefinidas += parseInt((ch||'0').replace(/[^0-9]/g,''))||0; }
+    });
+  }
+  const chBaseReal = usaNomesUC && chUCsDefinidas > 0 ? chUCsDefinidas : chBase;
+  const chTotal    = chBaseReal + (usaModBasico?40:0) + chEmpreender;
+  return {
+    nomeCurso: v('nomeCurso'), cargaHoraria: v('cargaHoraria'), cbo: v('cbo'),
+    modalidade: v('modalidade'), eixo: v('eixo'), cliente: v('cliente'),
+    escolaridade: v('escolaridade'), idadeMinima: v('idadeMinima'), req: v('req'),
+    usaModBasico, usaEmpreender, chEmpreender, usaEja,
+    chBase: chBaseReal, chTotal,
+    usaNumUC, numUC, usaNomesUC, nomesUC
+  };
+}
+function v(id){ return document.getElementById(id).value; }
+
+// ══════════════════════════════════════════════════════
+// UC ROWS
+// ══════════════════════════════════════════════════════
+function toggleNumUC(){
+  document.getElementById('numUCArea').style.display = document.getElementById('chkNumUC').checked ? 'block' : 'none';
+}
+function toggleNomesUC(){
+  const on = document.getElementById('chkNomesUC').checked;
+  document.getElementById('nomesUCArea').style.display = on ? 'block' : 'none';
+  if(on && document.querySelectorAll('.uc-row').length===0) addUCRow();
+}
+function addUCRow(){
+  const row = document.createElement('div');
+  row.className = 'uc-row';
+  row.innerHTML = `<input class="uc-nome" placeholder="Nome da UC"><input class="uc-ch ch-inp" placeholder="Ex: 40h"><button class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('ucRows').appendChild(row);
+}
+
+// ══════════════════════════════════════════════════════
+// FILE HANDLING (Descritivo)
+// ══════════════════════════════════════════════════════
+function onDragOver(e, zoneId='dropZone'){ e.preventDefault(); document.getElementById(zoneId).classList.add('drag-over'); }
+function onDragLeave(e, zoneId='dropZone'){ document.getElementById(zoneId).classList.remove('drag-over'); }
+function onDrop(e, target='descritivo'){ e.preventDefault(); const f = e.dataTransfer.files[0]; if(f){ if(target==='ficha') handleFileFicha(f); else handleFile(f); } }
+
+async function handleFile(file){
+  if(!file) return;
+  document.getElementById('dropZone').classList.remove('drag-over');
+  showDocSuccess(file.name);
+  docText = await extractText(file);
+  document.getElementById('previewText').textContent = docText.slice(0,800)+'...';
+  document.getElementById('previewArea').style.display='block';
+  document.getElementById('btnGerar').disabled = false;
+}
+
+async function handleFileFicha(file){
+  if(!file) return;
+  document.getElementById('dropZoneFicha').classList.remove('drag-over');
+  showDocSuccessFicha(file.name);
+  docFichaText = await extractText(file);
+  document.getElementById('fichaPreviewText').textContent = docFichaText.slice(0,600)+'...';
+  document.getElementById('fichaPreviewArea').style.display='block';
+}
+
+function showDocSuccess(name){
+  const el = document.getElementById('docSuccess');
+  el.innerHTML = `<div class="doc-success"><span class="doc-success-icon">✅</span><span class="doc-success-name">${name}</span></div>`;
+  el.style.display='block';
+}
+function showDocSuccessFicha(name){
+  const el = document.getElementById('fichaDocSuccess');
+  el.innerHTML = `<div class="doc-success"><span class="doc-success-icon">✅</span><span class="doc-success-name">${name}</span></div>`;
+  el.style.display='block';
+}
+function clearDoc(){ docText=''; document.getElementById('docSuccess').style.display='none'; document.getElementById('previewArea').style.display='none'; document.getElementById('btnGerar').disabled=true; }
+function clearDocFicha(){ docFichaText=''; document.getElementById('fichaDocSuccess').style.display='none'; document.getElementById('fichaPreviewArea').style.display='none'; }
+
+async function extractText(file){
+  const name = file.name.toLowerCase();
+  if(name.endsWith('.txt')) return await file.text();
+  if(name.endsWith('.docx')){
+    try{
+      const arr = await file.arrayBuffer();
+      const res = await mammoth.extractRawText({arrayBuffer: arr});
+      return res.value;
+    }catch(e){ return ''; }
+  }
+  if(name.endsWith('.pdf')){
+    try{
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arr = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data: arr}).promise;
+      let txt = '';
+      for(let i=1;i<=Math.min(pdf.numPages,15);i++){
+        const pg = await pdf.getPage(i);
+        const content = await pg.getTextContent();
+        txt += content.items.map(it=>it.str).join(' ')+'\n';
+      }
+      return txt;
+    }catch(e){ return ''; }
+  }
+  return '';
+}
+
+function semDoc(){
+  docText = '';
+  goStep(3);
+  gerar();
+}
+
+// ══════════════════════════════════════════════════════
+// PROMPT BUILDER
+// ══════════════════════════════════════════════════════
+function buildPrompt(form, txt){
+  let ucInstrucao = '';
+  if(form.usaNomesUC && form.nomesUC.length>0){
+    ucInstrucao = '\nUNIDADES CURRICULARES (use EXATAMENTE estes nomes e cargas):\n'+
+      form.nomesUC.map((u,i)=>`UC ${i+1}: ${u.nome} | ${u.ch}`).join('\n')+'\n';
+  } else if(form.usaNumUC && form.numUC){
+    ucInstrucao = `\nQUANTIDADE DE UCs TÉCNICAS: Gere exatamente ${form.numUC} unidades curriculares técnicas.\n`;
+  }
+  const regraExtra = form.usaNomesUC && form.nomesUC.length>0
+    ? '\n6. USE EXATAMENTE os nomes e cargas das UCs fornecidas.'
+    : form.usaNumUC && form.numUC
+    ? `\n6. Gere EXATAMENTE ${form.numUC} UCs técnicas, distribuindo as ${form.chBase}h entre elas.`
+    : '';
+
+  const ejaInstrucao = form.usaEja ? `
+
+EJA PROFISSIONALIZANTE: Este curso será ofertado na modalidade EJA Profissionalizante.
+Adapte o descritivo incluindo:
+- Integração Ensino Médio + Qualificação Profissional
+- 80% presencial e 20% assíncrona
+- Idade mínima: 18 anos
+- Metodologia de Reconhecimento de Saberes (MRS)
+- Estratégias de permanência e êxito para o público EJA
+- Critérios de avaliação e certificação específicos do EJA
+- Seção 13: DIRETRIZES ESPECÍFICAS DO EJA PROFISSIONALIZANTE
+` : '';
+
+  return `Você é especialista SENAI. Crie descritivo de curso no padrão MSEP.
+
+CURSO: ${form.nomeCurso} | ${form.cargaHoraria} | ${form.modalidade} | ${form.eixo}
+${form.cbo?'CBO: '+form.cbo:''}${ucInstrucao}${ejaInstrucao}
+DOCUMENTO NORTEADOR:
+---
+${txt.slice(0,11000)}
+---
+
+Retorne SOMENTE JSON válido (sem markdown, sem texto extra):
+{"justificativa":"2-3 parágrafos","objetivo":"objetivo geral","descricao":"descrição do curso","publicoAlvo":"público-alvo","perfilSaida":["competência 1","competência 2","competência 3","competência 4","competência 5","competência 6"],"metodologia":"metodologia MSEP SENAI com projetos","perfilDocente":"formação e experiência do docente","modulos":[{"nome":"MÓDULO ESPECÍFICO I","chModulo":"Xh","ucs":[{"nome":"UC técnica","ch":"Xh","objetivo":"objetivo","capacidades":["Identificar...","Aplicar...","Desenvolver...","Utilizar..."],"conhecimentos":["con1","con2","con3","con4","con5","con6","con7"]}]}],"infraestrutura":{"ambiente":["Laboratório de informática com mobiliário ergonômico","Climatização adequada","Quadro branco e pincéis"],"equipamentos":[["Computadores (mín. 8GB RAM, internet)","1 por aluno"],["Projetor multimídia","1"]],"softwares":["Sistemas operacionais","Navegadores web modernos","Suíte Office"],"materiais":"Apostilas, guias de laboratório.","epis":["Óculos de proteção para atividades práticas"],"conectividade":["Internet banda larga","Wi-Fi para dispositivos móveis"]},"referencias":["Referência 1 – SENAI","Referência 2"]${form.usaEja?',"eja":{"diretrizes":"texto das diretrizes EJA","atividadesAssincronas":["Videoaulas na plataforma","Fóruns de discussão orientada","Desafios práticos aplicados ao trabalho"]}'  :''}}
+
+REGRAS:
+1. Gere SOMENTE módulos técnicos específicos, totalizando ${form.chBase}h.
+2. NÃO crie: Módulo Básico, Aprender a Empreender, nem módulos genéricos.
+3. Capacidades com verbos no infinitivo. 4-6 capacidades e 6-10 conhecimentos por UC.
+4. Use o documento norteador como referência técnica principal.${regraExtra}`;
+}
+
+// ══════════════════════════════════════════════════════
+// GERAR DESCRITIVO
+// ══════════════════════════════════════════════════════
+function log(msg, type=''){
+  const box = document.getElementById('logBox');
+  const span = document.createElement('div');
+  span.className = 'log-'+type;
+  span.textContent = '> '+msg;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function gerar(){
+  const form = getForm();
+  document.getElementById('logBox').innerHTML='';
+  document.getElementById('spinnerArea').style.display='block';
+  document.getElementById('resultIcon').style.display='none';
+  document.getElementById('resultBtns').style.display='none';
+  document.getElementById('resultTitle').textContent='Gerando Descritivo...';
+  document.getElementById('resultSub').textContent='O agente está criando o conteúdo técnico completo';
+
+  log('Iniciando geração...','info');
+  log(`Curso: ${form.nomeCurso} | ${form.cargaHoraria}`,'info');
+  if(form.usaEja) log('Modalidade EJA Profissionalizante ativada','info');
+  if(docText) log('Documento norteador carregado ('+docText.length+' chars)','ok');
+  else log('Sem documento norteador — geração livre','info');
+
+  try{
+    log('Chamando API Claude...','info');
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:8000,
+        messages:[{role:'user',content: buildPrompt(form, docText)}]
+      })
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data = await resp.json();
+    const raw = data.content[0].text;
+    log('Resposta recebida, processando JSON...','ok');
+    const ai = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim());
+    log('JSON válido — construindo DOCX...','ok');
+    const blob = await buildDocx(ai, form);
+    const url  = URL.createObjectURL(blob);
+    const nm   = form.nomeCurso.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'-');
+    document.getElementById('btnDownload').href = url;
+    document.getElementById('btnDownload').download = `Descritivo-${nm}.docx`;
+    document.getElementById('btnDownload').style.display='inline-flex';
+    log('✅ Descritivo gerado com sucesso!','ok');
+    document.getElementById('spinnerArea').style.display='none';
+    document.getElementById('resultIcon').textContent='🎉';
+    document.getElementById('resultIcon').style.display='block';
+    document.getElementById('resultTitle').textContent='Descritivo Pronto!';
+    document.getElementById('resultSub').textContent='Clique em Baixar para obter o arquivo .docx';
+    document.getElementById('resultBtns').style.display='flex';
+    document.getElementById('btnRetry').style.display='none';
+  }catch(e){
+    log('Erro: '+e.message,'err');
+    document.getElementById('spinnerArea').style.display='none';
+    document.getElementById('resultIcon').textContent='❌';
+    document.getElementById('resultIcon').style.display='block';
+    document.getElementById('resultTitle').textContent='Erro na Geração';
+    document.getElementById('resultSub').textContent='Verifique a conexão e tente novamente';
+    document.getElementById('resultBtns').style.display='flex';
+    document.getElementById('btnRetry').style.display='inline-flex';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// GERAR FICHA DE PRODUTO
+// ══════════════════════════════════════════════════════
+function checkFicha(){
+  const nome = document.getElementById('f_nome').value.trim();
+  const ch   = document.getElementById('f_ch').value.trim();
+  document.getElementById('btnGerarFicha').disabled = !(nome && ch);
+}
+
+function logFicha(msg, type=''){
+  const box = document.getElementById('fichaLogBox');
+  const span = document.createElement('div');
+  span.className = 'log-'+type;
+  span.textContent = '> '+msg;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function gerarFicha(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pageFichaResult').classList.add('active');
+  document.getElementById('fichaLogBox').innerHTML='';
+  document.getElementById('fichaSpinner').style.display='block';
+  document.getElementById('fichaResultIcon').style.display='none';
+  document.getElementById('fichaResultBtns').style.display='none';
+
+  const nome     = document.getElementById('f_nome').value.trim();
+  const ch       = document.getElementById('f_ch').value.trim();
+  const modalidade = document.getElementById('f_modalidade').value;
+  const eixo     = document.getElementById('f_eixo').value;
+  const publico  = document.getElementById('f_publico').value.trim();
+  const cert     = document.getElementById('f_cert').value.trim();
+  const freq     = document.getElementById('f_freq').value.trim();
+
+  logFicha('Iniciando geração da ficha...','info');
+  logFicha(`Produto: ${nome} | ${ch}`,'info');
+  if(docFichaText) logFicha('Documento de referência carregado ('+docFichaText.length+' chars)','ok');
+
+  const prompt = `Você é especialista SENAI. Crie uma ficha de produto de curso no padrão SENAI.
+
+DADOS DO CURSO:
+Nome: ${nome}
+Carga Horária: ${ch}
+Modalidade: ${modalidade}
+Eixo Tecnológico: ${eixo}
+Público-Alvo: ${publico||'Profissionais e interessados na área'}
+Certificado: ${cert||'Certificado de '+modalidade+' em '+nome}
+Frequência Mínima: ${freq}
+
+DOCUMENTO DE REFERÊNCIA (programação/conteúdo):
+---
+${docFichaText.slice(0,8000)||'Não fornecido — crie programação adequada ao curso.'}
+---
+
+Retorne SOMENTE JSON válido:
+{
+  "descricao": "Parágrafo descritivo do curso (2-3 frases)",
+  "publicoAlvo": "Descrição completa do público-alvo",
+  "certificado": "Nome completo do certificado",
+  "programacao": [
+    {
+      "modulo": "Nome do Módulo (Xh)",
+      "topicos": ["Tópico 1","Tópico 2","Tópico 3","Tópico 4","Tópico 5"]
+    }
+  ]
+}
+
+REGRAS:
+1. Use o documento de referência como base para a programação.
+2. Se não houver documento, crie programação técnica adequada ao tema.
+3. A soma das cargas dos módulos deve totalizar ${ch}.
+4. 3-5 módulos com 4-8 tópicos cada.`;
+
+  try{
+    logFicha('Chamando API Claude...','info');
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data = await resp.json();
+    const raw  = data.content[0].text;
+    logFicha('Resposta recebida, processando JSON...','ok');
+    const ai = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim());
+    logFicha('JSON válido — construindo DOCX ficha...','ok');
+    const blob = await buildFichaDocx(ai, {nome,ch,modalidade,eixo,publico,cert:ai.certificado||cert,freq});
+    const url  = URL.createObjectURL(blob);
+    document.getElementById('btnDownloadFicha').href = url;
+    document.getElementById('btnDownloadFicha').download = `Ficha-Produto-${nome.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'-')}.docx`;
+    document.getElementById('btnDownloadFicha').style.display='inline-flex';
+    logFicha('✅ Ficha de produto gerada com sucesso!','ok');
+    document.getElementById('fichaSpinner').style.display='none';
+    document.getElementById('fichaResultIcon').textContent='🎉';
+    document.getElementById('fichaResultIcon').style.display='block';
+    document.getElementById('fichaResultTitle').textContent='Ficha Pronta!';
+    document.getElementById('fichaResultSub').textContent='Clique em Baixar para obter o arquivo .docx';
+    document.getElementById('fichaResultBtns').style.display='flex';
+  }catch(e){
+    logFicha('Erro: '+e.message,'err');
+    document.getElementById('fichaSpinner').style.display='none';
+    document.getElementById('fichaResultIcon').textContent='❌';
+    document.getElementById('fichaResultIcon').style.display='block';
+    document.getElementById('fichaResultTitle').textContent='Erro na Geração';
+    document.getElementById('fichaResultBtns').style.display='flex';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// BUILD DOCX — DESCRITIVO
+// ══════════════════════════════════════════════════════
+async function buildDocx(ai, form){
+  const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
+    AlignmentType,LevelFormat,BorderStyle,WidthType,ShadingType} = window.docx;
+
+  const bS = (c="AAAAAA")=>({style:BorderStyle.SINGLE,size:4,color:c});
+  const bA = (c="AAAAAA")=>({top:bS(c),bottom:bS(c),left:bS(c),right:bS(c)});
+  const R  = (t,b=false,s=20,c="000000")=>new TextRun({text:t,bold:b,size:s,color:c,font:"Arial"});
+  const P  = (runs,align=AlignmentType.LEFT,sp={before:40,after:40})=>new Paragraph({alignment:align,spacing:sp,children:runs});
+  const Pb = (text,b=false)=>new Paragraph({alignment:AlignmentType.JUSTIFIED,spacing:{before:40,after:40},children:[R(text,b)]});
+  const Pbul=(text)=>new Paragraph({numbering:{reference:"bullets",level:0},spacing:{before:30,after:30},children:[R(text,false,18)]});
+  const Ps = (num,title)=>new Paragraph({alignment:AlignmentType.LEFT,spacing:{before:200,after:100},
+    border:{bottom:{style:BorderStyle.SINGLE,size:6,color:AZUL}},
+    children:[R(num+". "+title.toUpperCase(),true,22,AZUL)]});
+  const Psb= (text)=>new Paragraph({spacing:{before:100,after:60},children:[R(text,true,20,AZUL)]});
+
+  const nm = form.nomeCurso;
+  const md = form.modalidade === 'Qualificação Profissional' ? 'Qualificação Profissional' : form.modalidade;
+  const cH = form.chTotal+'h';
+
+  // TABELA IDENTIFICAÇÃO
+  const Ti = (rows)=>new Table({
+    width:{size:9026,type:WidthType.DXA},columnWidths:[3000,6026],
+    rows: rows.map(([k,val])=>new TableRow({children:[
+      new TableCell({borders:bA(AZUL),width:{size:3000,type:WidthType.DXA},
+        shading:{fill:AZUL,type:ShadingType.CLEAR},
+        margins:{top:80,bottom:80,left:120,right:120},
+        children:[new Paragraph({alignment:AlignmentType.LEFT,children:[R(k,true,18,BRANCO)]})]
+      }),
+      new TableCell({borders:bA(AZUL),width:{size:6026,type:WidthType.DXA},
+        margins:{top:80,bottom:80,left:120,right:120},
+        children:[new Paragraph({alignment:AlignmentType.LEFT,children:[R(val||'—',false,18)]})]
+      })
+    ]}))
+  });
+
+  // TABELA UC
+  const Tuc = (modulo,ucNome,ucCh,objetivo,capacidades,conhecimentos)=>[
+    new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[9026],rows:[
+      new TableRow({children:[new TableCell({borders:bA(AZUL),width:{size:9026,type:WidthType.DXA},
+        shading:{fill:AZUL,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:120},
+        children:[P([R(modulo,true,20,BRANCO)],AlignmentType.CENTER)]})]}),
+      new TableRow({children:[new TableCell({borders:bA('AAAAAA'),width:{size:9026,type:WidthType.DXA},
+        margins:{top:80,bottom:80,left:120,right:120},
+        children:[P([R("Unidade Curricular: ",true,18),R(ucNome,false,18)])]})]}),
+      new TableRow({children:[new TableCell({borders:bA('AAAAAA'),width:{size:9026,type:WidthType.DXA},
+        margins:{top:80,bottom:80,left:120,right:120},
+        children:[P([R("Carga Horária: ",true,18),R(ucCh,false,18)])]})]}),
+      new TableRow({children:[new TableCell({borders:bA('AAAAAA'),width:{size:9026,type:WidthType.DXA},
+        margins:{top:80,bottom:80,left:120,right:120},
+        children:[P([R("Objetivo Geral: ",true,18),R(objetivo,false,18)])]})]}),
+    ]}),
+    new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[4513,4513],rows:[
+      new TableRow({children:[
+        new TableCell({borders:bA('AAAAAA'),width:{size:4513,type:WidthType.DXA},
+          shading:{fill:CINZA,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:120},
+          children:[P([R("CAPACIDADES",true,18)])]
+        }),
+        new TableCell({borders:bA('AAAAAA'),width:{size:4513,type:WidthType.DXA},
+          shading:{fill:CINZA,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:120},
+          children:[P([R("CONHECIMENTOS",true,18)])]
+        })
+      ]}),
+      new TableRow({children:[
+        new TableCell({borders:bA('AAAAAA'),width:{size:4513,type:WidthType.DXA},
+          margins:{top:80,bottom:80,left:120,right:120},
+          children: capacidades.map(c=>Pbul(c))
+        }),
+        new TableCell({borders:bA('AAAAAA'),width:{size:4513,type:WidthType.DXA},
+          margins:{top:80,bottom:80,left:120,right:120},
+          children: conhecimentos.map(c=>Pbul(c))
+        })
+      ]})
+    ]}),
+    new Paragraph({spacing:{before:80,after:80},children:[]})
+  ];
+
+  // TABELA EQUIPAMENTOS
+  const Te = (rows)=>new Table({
+    width:{size:9026,type:WidthType.DXA},columnWidths:[6000,3026],
+    rows:[
+      new TableRow({children:[
+        new TableCell({borders:bA(CINZA),shading:{fill:CINZA,type:ShadingType.CLEAR},
+          width:{size:6000,type:WidthType.DXA},margins:{top:60,bottom:60,left:100,right:100},
+          children:[P([R("Equipamento / Material",true,18)])]
+        }),
+        new TableCell({borders:bA(CINZA),shading:{fill:CINZA,type:ShadingType.CLEAR},
+          width:{size:3026,type:WidthType.DXA},margins:{top:60,bottom:60,left:100,right:100},
+          children:[P([R("Quantidade",true,18)])]
+        })
+      ]}),
+      ...(rows||[]).map(([eq,qt])=>new TableRow({children:[
+        new TableCell({borders:bA('AAAAAA'),width:{size:6000,type:WidthType.DXA},margins:{top:60,bottom:60,left:100,right:100},children:[Pb(eq)]}),
+        new TableCell({borders:bA('AAAAAA'),width:{size:3026,type:WidthType.DXA},margins:{top:60,bottom:60,left:100,right:100},children:[Pb(qt)]})
+      ]}))
+    ]
+  });
+
+  // LOGO SENAI (texto SVG via ImageRun não é possível, usamos texto grande)
+  const T1 = (ch,fill=BRANCO)=>new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[9026],rows:[new TableRow({children:[new TableCell({borders:bA('AAAAAA'),shading:{fill,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:120},children:ch})]})]});
+
+  const children = [
+    // Cabeçalho SENAI
+    P([R("SENAI BAHIA",true,36,AZUL)],AlignmentType.CENTER,{before:0,after:80}),
+    P([R(form.eixo.toUpperCase(),true,22,AZUL)],AlignmentType.CENTER,{before:0,after:40}),
+    P([R("DESCRITIVO DE CURSO",true,28,AZUL)],AlignmentType.CENTER,{before:0,after:240}),
+
+    Ps("1","IDENTIFICAÇÃO"),new Paragraph({spacing:{before:80,after:80},children:[]}),
+    Ti([
+      ["TÍTULO DO CURSO:",nm],
+      ["OCUPAÇÃO:",form.cbo||""],
+      ["MODALIDADE:",md],
+      ["EIXO TECNOLÓGICO:",form.eixo],
+      ["CLIENTE:",form.cliente||""],
+      ["CARGA HORÁRIA:",cH]
+    ]),
+
+    Ps("2","JUSTIFICATIVA"),Pb(ai.justificativa),
+    Psb("2.1 OBJETIVO:"),Pb(ai.objetivo),
+    Psb("2.2 DESCRIÇÃO DO CURSO"),Pb(ai.descricao),
+    Psb("2.3 PÚBLICO-ALVO"),Pb(ai.publicoAlvo),
+
+    Ps("3","REQUISITOS DE ACESSO OBRIGATÓRIO"),
+    Pb("Escolaridade mínima: "+form.escolaridade),
+    Pb("Idade mínima: "+form.idadeMinima+" anos"),
+    ...(form.usaEja ? [
+      Pb("Modalidade: EJA Profissionalizante SESI/SENAI"),
+      Pb("Não ter concluído o Ensino Médio."),
+      Pb("Estar apto à matrícula na EJA Profissionalizante SESI/SENAI."),
+    ] : []),
+    ...(form.req ? [Pb(form.req)] : []),
+
+    Ps("4","PERFIL PROFISSIONAL DE CONCLUSÃO"),
+    Pb("O egresso será capaz de:"),
+    ...ai.perfilSaida.map(p=>Pbul(p)),
+
+    Ps("5","ORGANIZAÇÃO CURRICULAR"),
+    Psb("5.1 UNIDADES CURRICULARES, CARGAS HORÁRIAS E CONTEÚDOS FORMATIVOS:"),
+    new Paragraph({spacing:{before:80,after:80},children:[]}),
+
+    // MÓDULO BÁSICO
+    ...(form.usaModBasico ? [
+      T1([P([R("MÓDULO BÁSICO",true,22)],AlignmentType.CENTER)],CINZA),
+      ...Tuc("MÓDULO BÁSICO","Sustentabilidade nos Processos Industriais","8h",
+        "Desenvolver a capacidade do estudante de aplicar práticas de sustentabilidade em processos industriais.",
+        ["Identificar impactos ambientais dos processos produtivos","Aplicar práticas de produção limpa","Reconhecer legislação ambiental pertinente","Propor soluções sustentáveis no ambiente de trabalho"],
+        ["Conceito de desenvolvimento sustentável","Gestão de resíduos industriais","Legislação ambiental brasileira","Energias renováveis","Pegada de carbono","Processos produtivos sustentáveis"]
+      ),
+      ...Tuc("MÓDULO BÁSICO","Saúde e Segurança no Trabalho","12h",
+        "Aplicar normas e práticas de saúde e segurança no trabalho para a prevenção de acidentes.",
+        ["Identificar riscos ocupacionais","Utilizar EPIs adequados","Aplicar primeiros socorros básicos","Reconhecer normas regulamentadoras"],
+        ["NRs aplicáveis à área","EPIs e EPCs","Mapa de riscos","CIPA","Ergonomia","Primeiros socorros","PPRA e PCMSO"]
+      ),
+      ...Tuc("MÓDULO BÁSICO","Fundamentos da Qualidade e Produtividade","8h",
+        "Desenvolver a capacidade de identificar e aplicar ferramentas de qualidade e produtividade.",
+        ["Identificar conceitos de qualidade total","Aplicar ferramentas da qualidade","Analisar indicadores de produtividade","Reconhecer padrões de qualidade"],
+        ["Qualidade total (TQM)","Ferramentas da qualidade: 5S, PDCA, Ishikawa","Indicadores de produtividade","ISO 9001","Padronização de processos","Kaizen"]
+      ),
+      ...Tuc("MÓDULO BÁSICO","Fundamentos da Indústria 4.0","12h",
+        "Apresentar os princípios e tecnologias da Indústria 4.0 e sua aplicação nos processos produtivos.",
+        ["Identificar tecnologias da Indústria 4.0","Relacionar transformação digital com o setor produtivo","Reconhecer aplicações de IoT","Compreender impacto das tecnologias digitais"],
+        ["Conceito e pilares da Indústria 4.0","Internet das Coisas (IoT)","Big Data e Analytics","Inteligência Artificial","Computação em nuvem","Cibersegurança industrial"]
+      )
+    ] : []),
+
+    // MÓDULO APRENDER A EMPREENDER (conteúdo atualizado)
+    ...(form.usaEmpreender ? [
+      T1([P([R("MÓDULO APRENDER A EMPREENDER",true,22)],AlignmentType.CENTER)],CINZA),
+      ...Tuc("MÓDULO APRENDER A EMPREENDER","Aprender a Empreender",form.chEmpreender+"h",
+        "Desenvolver atitudes empreendedoras e aplicar conhecimentos de marketing, finanças e inovação, com uso de tecnologias digitais acessíveis, para planejar e divulgar pequenos negócios ou soluções criativas voltadas à realidade socioprofissional.",
+        ["Identificar características e atitudes empreendedoras","Reconhecer o próprio potencial para empreender com base em experiências pessoais","Utilizar ferramentas digitais (mobile) para organização de ideias e metas","Aplicar ferramentas de ideação (Canvas simplificado) na elaboração de ideias de negócio","Realizar pesquisa de mercado utilizando canais digitais acessíveis","Aplicar estratégias de marketing digital utilizando aplicativos móveis","Produzir conteúdo visual criativo para divulgar produtos ou serviços","Organizar orçamento pessoal e do pequeno negócio com aplicativos de finanças","Identificar custos, calcular preço de venda e analisar viabilidade do negócio","Compreender e aplicar direitos trabalhistas básicos incluindo SST e igualdade"],
+        ["Características e atitudes empreendedoras","Autoempreendedorismo: missão pessoal e valores","Direitos fundamentais do trabalhador (CLT): SST, igualdade de gênero","Ferramentas digitais: Canva e Trello mobile para registro de ideias","Ideação e modelagem simples de negócios (Canvas simplificado)","Pesquisa de mercado com redes sociais e apps gratuitos","Atendimento ao cliente em canais digitais (WhatsApp Business, Instagram)","Produção de conteúdo mobile-first: fotos, vídeos e descrições","Apps gratuitos para edição e divulgação: CapCut, Canva, InShot","Educação financeira pessoal e familiar","Controle financeiro com apps gratuitos","Noções básicas de precificação e viabilidade do negócio"]
+      )
+    ] : []),
+
+    // MÓDULOS TÉCNICOS (IA)
+    ...ai.modulos.flatMap(m=>m.ucs.flatMap(u=>Tuc(m.nome,u.nome,u.ch,u.objetivo,u.capacidades,u.conhecimentos))),
+
+    Ps("6","METODOLOGIA E ESTRATÉGIAS PEDAGÓGICAS"),Pb(ai.metodologia),
+    Ps("7","BIBLIOTECA, INSTALAÇÕES E EQUIPAMENTOS"),
+    Pb("A Biblioteca deverá ser adequada, quando necessária, para o referido curso. Será disponibilizada a sistemática de biblioteca (itinerante) e do acervo bibliográfico. Os alunos receberão material didático para cada Unidade Curricular do curso."),
+    Ps("8","CRITÉRIOS DE AVALIAÇÃO"),
+    Pb(form.usaEja
+      ? "A avaliação será processual e contínua, com instrumentos diversificados: situações de aprendizagem, projetos integradores, portfólios, estudos de caso, avaliações práticas e autoavaliação por rubricas. Será considerado aprovado o aluno que alcançar nota igual ou superior a 5,0 (cinco) e frequência mínima de 75% (setenta e cinco por cento), conforme diretrizes do EJA Profissionalizante SESI/SENAI."
+      : "A avaliação será processual e contínua, envolverá os aspectos qualitativos e quantitativos. Avaliação formativa por meio de exercícios práticos, desenvolvimento de projetos, participação nas discussões e apresentação de portfólio. Será considerado aprovado por média final, o aluno que alcançar nota igual ou superior a 7,0 (sete) e frequência mínima de 75% (setenta e cinco por cento) no curso, conforme diretrizes do Regimento Comum das Escolas Técnicas do SENAI DR-BA."
+    ),
+    Ps("9","PERFIL DOCENTE"),Pb(ai.perfilDocente),
+    Ps("10","CRITÉRIOS DE CERTIFICAÇÃO"),
+    Pb("O certificado de "+md+" em "+nm+" será conferido ao aluno que obtiver média de aproveitamento e índice de frequência estabelecido nos critérios de avaliação."),
+    Psb("10.1 CONTEÚDO DO CERTIFICADO:"),
+    Pb(md+" em "+nm+" – "+cH,true),
+    ...(form.usaModBasico ? [
+      new Paragraph({spacing:{before:60,after:40},children:[R("MÓDULO BÁSICO – 40h",true,20)]}),
+      Pb("Sustentabilidade nos Processos Industriais – 8h"),Pb("Saúde e Segurança no Trabalho – 12h"),
+      Pb("Fundamentos da Qualidade e Produtividade – 8h"),Pb("Fundamentos da Indústria 4.0 – 12h")
+    ]:[]),
+    ...(form.usaEmpreender ? [
+      new Paragraph({spacing:{before:60,after:40},children:[R("MÓDULO APRENDER A EMPREENDER – "+form.chEmpreender+"h",true,20)]}),
+      Pb("Aprender a Empreender – "+form.chEmpreender+"h")
+    ]:[]),
+    ...ai.modulos.flatMap(m=>[
+      new Paragraph({spacing:{before:60,after:40},children:[R(m.nome+" – "+m.chModulo,true,20)]}),
+      ...m.ucs.map(u=>Pb(u.nome+" – "+u.ch))
+    ]),
+
+    Ps("11","INFRAESTRUTURA MÍNIMA RECOMENDADA"),
+    Psb("11.1 Ambiente Físico:"),
+    ...ai.infraestrutura.ambiente.map(i=>Pbul(i)),
+    Psb("11.2 Equipamentos Tecnológicos:"),
+    new Paragraph({spacing:{before:80,after:80},children:[]}),
+    Te(ai.infraestrutura.equipamentos),
+    Psb("11.3 Softwares:"),
+    ...ai.infraestrutura.softwares.map(s=>Pbul(s)),
+    Psb("11.4 Materiais Didáticos:"),Pb(ai.infraestrutura.materiais),
+    Psb("11.5 EPIs e Segurança:"),
+    ...ai.infraestrutura.epis.map(e=>Pbul(e)),
+    Psb("11.6 Conectividade:"),
+    ...ai.infraestrutura.conectividade.map(c=>Pbul(c)),
+    Ps("12","REFERÊNCIAS: https://estantedelivros.senai.br/"),
+    ...ai.referencias.map(r=>Pb(r)),
+
+    // SEÇÃO EJA (se ativado)
+    ...(form.usaEja && ai.eja ? [
+      Ps("13","DIRETRIZES ESPECÍFICAS DO EJA PROFISSIONALIZANTE"),
+      Pb(ai.eja.diretrizes),
+      Psb("Atividades Assíncronas:"),
+      ...(ai.eja.atividadesAssincronas||[]).map(a=>Pbul(a))
+    ] : [])
+  ];
+
+  const doc = new Document({
+    numbering:{config:[{reference:"bullets",levels:[{level:0,format:LevelFormat.BULLET,text:"\u2022",alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:540,hanging:260}}}}]}]},
+    styles:{default:{document:{run:{font:"Arial",size:20}}}},
+    sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1134,right:1800,bottom:1134,left:1800}}},children}]
+  });
+  return await Packer.toBlob(doc);
+}
+
+// ══════════════════════════════════════════════════════
+// BUILD DOCX — FICHA DE PRODUTO
+// ══════════════════════════════════════════════════════
+async function buildFichaDocx(ai, form){
+  const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
+    AlignmentType,LevelFormat,BorderStyle,WidthType,ShadingType} = window.docx;
+
+  const bS = (c="AAAAAA")=>({style:BorderStyle.SINGLE,size:4,color:c});
+  const bA = (c)=>({top:bS(c),bottom:bS(c),left:bS(c),right:bS(c)});
+  const R  = (t,b=false,s=20,c="000000")=>new TextRun({text:t,bold:b,size:s,color:c,font:"Arial"});
+  const Pb = (text,b=false)=>new Paragraph({alignment:AlignmentType.JUSTIFIED,spacing:{before:40,after:40},children:[R(text,b)]});
+  const Pbul=(text)=>new Paragraph({numbering:{reference:"bullets",level:0},spacing:{before:30,after:30},children:[R(text,false,18)]});
+  const Pc = (text,b=false,s=20,c="000000")=>new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:40,after:40},children:[R(text,b,s,c)]});
+
+  // Tabela de capa (estilo ficha produto)
+  const fichaTable = new Table({
+    width:{size:9026,type:WidthType.DXA},columnWidths:[9026],
+    rows:[
+      // Cabeçalho azul com nome do curso
+      new TableRow({children:[new TableCell({
+        borders:bA(AZUL),width:{size:9026,type:WidthType.DXA},
+        shading:{fill:AZUL,type:ShadingType.CLEAR},
+        margins:{top:200,bottom:200,left:200,right:200},
+        children:[
+          new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:80,after:40},children:[R("SENAI BAHIA",true,22,"FFFFFF")]}),
+          new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:0,after:80},children:[R(form.nome,true,32,"FFFFFF")]}),
+        ]
+      })]})
+    ]
+  });
+
+  // Tabela de dados
+  const dadosRows = [
+    ["Carga Horária:", form.ch],
+    ["Modalidade:", form.modalidade],
+    ["Eixo Tecnológico:", form.eixo],
+    ["Participantes:", ai.publicoAlvo || form.publico || "Profissionais e estudantes da área"],
+    ["Frequência Mínima:", form.freq],
+    ["Certificado:", form.cert],
+  ];
+  const dadosTable = new Table({
+    width:{size:9026,type:WidthType.DXA},columnWidths:[3000,6026],
+    rows: dadosRows.map(([k,val])=>new TableRow({children:[
+      new TableCell({borders:bA(AZUL),width:{size:3000,type:WidthType.DXA},
+        shading:{fill:"EBF0F8",type:ShadingType.CLEAR},
+        margins:{top:80,bottom:80,left:120,right:120},
+        children:[new Paragraph({children:[R(k,true,18,AZUL)]})]
+      }),
+      new TableCell({borders:bA(AZUL),width:{size:6026,type:WidthType.DXA},
+        margins:{top:80,bottom:80,left:120,right:120},
+        children:[new Paragraph({children:[R(val||'—',false,18)]})]
+      })
+    ]}))
+  });
+
+  // Programação
+  const progItems = (ai.programacao||[]).flatMap(mod=>[
+    new Paragraph({spacing:{before:120,after:60},children:[R("◆ "+mod.modulo,true,20,AZUL)]}),
+    ...(mod.topicos||[]).map(t=>Pbul(t))
+  ]);
+
+  const children = [
+    fichaTable,
+    new Paragraph({spacing:{before:160,after:80},children:[R("DESCRIÇÃO DO CURSO",true,22,AZUL)],
+      border:{bottom:{style:BorderStyle.SINGLE,size:6,color:AZUL}}}),
+    Pb(ai.descricao||''),
+    new Paragraph({spacing:{before:40,after:120},children:[R("Carga horária: ",true,18),R(form.ch+";",false,18)],}),
+    new Paragraph({spacing:{before:0,after:8},children:[R("Participantes: ",true,18),R(ai.publicoAlvo||form.publico||'',false,18)]}),
+    new Paragraph({spacing:{before:0,after:80},children:[
+      R("Ao final do curso, os participantes que concluírem com frequência mínima de "+form.freq+" e aproveitamento satisfatório receberão o ",false,18),
+      R(form.cert,true,18),R(", emitido pelo SENAI.",false,18)
+    ]}),
+    new Paragraph({spacing:{before:160,after:80},children:[R("PROGRAMAÇÃO",true,22,AZUL)],
+      border:{bottom:{style:BorderStyle.SINGLE,size:6,color:AZUL}}}),
+    ...progItems,
+  ];
+
+  const doc = new Document({
+    numbering:{config:[{reference:"bullets",levels:[{level:0,format:LevelFormat.BULLET,text:"-",alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:360,hanging:180}}}}]}]},
+    styles:{default:{document:{run:{font:"Arial",size:20}}}},
+    sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1134,right:1800,bottom:1134,left:1800}}},children}]
+  });
+  return await Packer.toBlob(doc);
+}
+
+// ══════════════════════════════════════════════════════
+// RESET
+// ══════════════════════════════════════════════════════
+function resetAll(){
+  docText='';
+  document.getElementById('nomeCurso').value='';
+  document.getElementById('cargaHoraria').value='';
+  document.getElementById('cbo').value='';
+  document.getElementById('cliente').value='';
+  document.getElementById('req').value='';
+  document.getElementById('chkModBasico').checked=false;
+  document.getElementById('chkEmpreender').checked=false;
+  document.getElementById('chkEja').checked=false;
+  document.getElementById('docSuccess').style.display='none';
+  document.getElementById('previewArea').style.display='none';
+  document.getElementById('btnGerar').disabled=true;
+  checkStep1();
+  goStep(1);
+}
+
+function resetFicha(){
+  docFichaText='';
+  document.getElementById('f_nome').value='';
+  document.getElementById('f_ch').value='';
+  document.getElementById('f_publico').value='';
+  document.getElementById('f_cert').value='';
+  document.getElementById('fichaDocSuccess').style.display='none';
+  document.getElementById('fichaPreviewArea').style.display='none';
+  checkFicha();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pageFicha').classList.add('active');
+}
+
+// Init
+checkStep1();
+</script>
+</body>
+</html>
