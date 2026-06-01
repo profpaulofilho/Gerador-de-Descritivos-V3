@@ -113,3 +113,28 @@ export default function LoginPage() {
               <div className="login-card-eyebrow">Primeiro acesso</div>
               <h2>Crie sua nova senha</h2>
               <p className="login-card-sub">Por segurança, defina uma senha pessoal.</p>
+              <form onSubmit={handleChangePassword}>
+                <div className="field">
+                  <label>Nova senha</label>
+                  <input type="password" required placeholder="Mínimo 8 caracteres"
+                    value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>Confirmar nova senha</label>
+                  <input type="password" required placeholder="Repita a senha"
+                    value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                </div>
+                {error && <div className="error-msg">{error}</div>}
+                <button className="primary-btn" disabled={loading} type="submit"
+                  style={{ width: '100%', marginTop: 8 }}>
+                  {loading ? 'Salvando...' : 'Salvar e entrar →'}
+                </button>
+              </form>
+            </>
+          )}
+        </section>
+
+      </div>
+    </main>
+  )
+}
