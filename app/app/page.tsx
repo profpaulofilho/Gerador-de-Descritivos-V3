@@ -25,6 +25,7 @@ type DescritivoForm = {
   moduloBasico: boolean; aprenderEmpreender: boolean; aprenderEmpreenderCh: string
   eja: boolean; numUC: string; usarNomesUC: boolean
   ucs: { nome: string; ch: string }[]
+  chTotal?: string // calculado automaticamente
 }
 type FichaForm = {
   nome: string; ch: string; modalidade: string; eixo: string
@@ -211,7 +212,7 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
       ['MODALIDADE:', form.modalidade],
       ['EIXO TECNOLÓGICO:', form.eixo],
       ['CLIENTE:', form.cliente || ''],
-      ['CARGA HORÁRIA:', form.cargaHoraria],
+      ['CARGA HORÁRIA:', form.chTotal || form.cargaHoraria],
     ]),
 
     sectionTitle('2', 'JUSTIFICATIVA'),
@@ -332,7 +333,7 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
     sectionTitle('10', 'CRITÉRIOS DE CERTIFICAÇÃO'),
     para(`O certificado de ${form.modalidade} em ${form.nomeCurso} será conferido ao aluno que obtiver média de aproveitamento e índice de frequência estabelecido nos critérios de avaliação.`),
     subTitle('10.1 CONTEÚDO DO CERTIFICADO:'),
-    new Paragraph({ spacing: { before: 60, after: 40 }, children: [run(`${form.modalidade} em ${form.nomeCurso} — ${form.cargaHoraria}`, true, 22)] }),
+    new Paragraph({ spacing: { before: 60, after: 40 }, children: [run(`${form.modalidade} em ${form.nomeCurso} — ${form.chTotal || form.cargaHoraria}`, true, 22)] }),
   )
 
   if (form.moduloBasico) {
@@ -481,6 +482,15 @@ export default function AppPage() {
     return Boolean(ficha.nome.trim() && ficha.ch.trim())
   }, [mode, desc.nomeCurso, desc.cargaHoraria, ficha.nome, ficha.ch])
 
+  // Cálculo automático da carga horária total
+  const chTotal = useMemo(() => {
+    const base = parseInt(desc.cargaHoraria.replace(/[^0-9]/g, '')) || 0
+    if (base === 0) return ''
+    const basico = desc.moduloBasico ? 40 : 0
+    const empreender = desc.aprenderEmpreender ? (parseInt(desc.aprenderEmpreenderCh) || 0) : 0
+    return (base + basico + empreender) + 'h'
+  }, [desc.cargaHoraria, desc.moduloBasico, desc.aprenderEmpreender, desc.aprenderEmpreenderCh])
+
   function log(text: string, type: LogKind = 'info') {
     setLogs(items => [...items, { text, type }])
   }
@@ -501,7 +511,7 @@ export default function AppPage() {
       log((mode === 'descritivo' ? docText : fichaDocText) ? 'Documento de referência carregado.' : 'Sem documento de referência.', 'info')
 
       const payload = mode === 'descritivo'
-        ? { mode, form: desc, documentText: docText }
+        ? { mode, form: { ...desc, chTotal }, documentText: docText }
         : { mode, form: ficha, documentText: fichaDocText }
 
       log('Chamando API...', 'info')
@@ -515,7 +525,7 @@ export default function AppPage() {
 
       log('Montando DOCX...', 'ok')
       const blob = mode === 'descritivo'
-        ? await buildDescritivoDocx(data.result, desc)
+        ? await buildDescritivoDocx(data.result, { ...desc, chTotal })
         : await buildFichaDocx(data.result, ficha)
 
       const baseName = (mode === 'descritivo' ? desc.nomeCurso : ficha.nome)
@@ -574,8 +584,23 @@ export default function AppPage() {
               <div className="glass-panel form-card">
                 <div className="section-head"><span>1</span><div><h2>Dados do curso</h2><p>Informe os dados principais do descritivo.</p></div></div>
                 <div className="field"><label>Nome do curso *</label><input value={desc.nomeCurso} onChange={e => setDesc({ ...desc, nomeCurso: e.target.value })} placeholder="Ex: Assistente em Tecnologias da Indústria 4.0" /></div>
-                <div className="grid2">
-                  <div className="field"><label>Carga horária *</label><input value={desc.cargaHoraria} onChange={e => setDesc({ ...desc, cargaHoraria: e.target.value })} placeholder="Ex: 200h" /></div>
+                <div className="grid3">
+                  <div className="field">
+                    <label>Carga horária específica *</label>
+                    <input
+                      value={desc.cargaHoraria}
+                      onChange={e => setDesc({ ...desc, cargaHoraria: e.target.value })}
+                      placeholder="Ex: 176h"
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Carga horária total</label>
+                    <input
+                      readOnly
+                      value={chTotal || '—'}
+                      style={{ background: 'var(--input-bg)', opacity: .8, cursor: 'default', fontWeight: 700, color: chTotal ? 'var(--senai-red)' : 'var(--muted)' }}
+                    />
+                  </div>
                   <div className="field"><label>CBO/Ocupação</label><input value={desc.cbo} onChange={e => setDesc({ ...desc, cbo: e.target.value })} placeholder="Opcional" /></div>
                 </div>
                 <div className="grid2">
