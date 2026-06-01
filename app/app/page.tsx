@@ -238,7 +238,7 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
     new Paragraph({ spacing: { before: 80, after: 80 }, children: [] }),
   ]
 
-  // Módulo Básico
+  // Módulo Básico — ANTES do Aprender a Empreender
   if (form.moduloBasico) {
     const basicUcs = [
       { nome: 'Sustentabilidade nos Processos Industriais', ch: '8h', objetivo: 'Desenvolver a capacidade do estudante de aplicar práticas de sustentabilidade em processos industriais, identificando impactos ambientais e propondo soluções sustentáveis.', cap: ['Identificar impactos ambientais de processos produtivos', 'Aplicar práticas de economia circular no contexto industrial', 'Propor soluções de redução de resíduos e consumo', 'Implementar princípios de gestão ambiental'], con: ['Conceitos de sustentabilidade e desenvolvimento sustentável', 'Legislação ambiental brasileira', 'ISO 14001 — Gestão ambiental', 'Economia circular e logística reversa', 'Poluição industrial e tratamento de resíduos', 'Boas práticas ambientais na indústria'] },
@@ -249,20 +249,67 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
     basicUcs.forEach(uc => children.push(...ucTable('MÓDULO BÁSICO', uc.nome, uc.ch, uc.objetivo, uc.cap, uc.con)))
   }
 
-  // Módulo Aprender a Empreender
+  // Módulo Aprender a Empreender — SEMPRE PRIMEIRO, conteúdo completo do documento atualizado
   if (form.aprenderEmpreender) {
     const chEmp = form.aprenderEmpreenderCh + 'h'
     children.push(...ucTable(
       'MÓDULO APRENDER A EMPREENDER',
       'Aprender a Empreender', chEmp,
       'Desenvolver atitudes empreendedoras e aplicar conhecimentos básicos de marketing, finanças e inovação, com uso de tecnologias digitais acessíveis, para planejar e divulgar pequenos negócios ou soluções criativas voltadas à realidade socioprofissional.',
-      ['Identificar características e atitudes empreendedoras','Reconhecer o próprio potencial para empreender com base em experiências pessoais','Utilizar ferramentas digitais (mobile) para organização de ideias e metas','Aplicar ferramentas de ideação (Canvas simplificado) na elaboração de ideias de negócio','Realizar pesquisa de mercado utilizando canais digitais acessíveis','Aplicar estratégias de marketing digital utilizando aplicativos móveis','Produzir conteúdo visual criativo para divulgar produtos ou serviços','Organizar orçamento pessoal e do pequeno negócio com aplicativos de finanças','Identificar custos, calcular preço de venda e analisar viabilidade do negócio','Compreender e aplicar direitos trabalhistas básicos incluindo SST e igualdade'],
-      ['Características e atitudes empreendedoras','Autoempreendedorismo: missão pessoal e valores','Direitos fundamentais do trabalhador (CLT): SST, igualdade de gênero','Ferramentas digitais: Canva e Trello mobile para registro de ideias','Ideação e modelagem simples de negócios (Canvas simplificado)','Pesquisa de mercado com redes sociais e apps gratuitos','Atendimento ao cliente em canais digitais (WhatsApp Business, Instagram)','Produção de conteúdo mobile-first: fotos, vídeos e descrições','Apps gratuitos para edição e divulgação: CapCut, Canva, InShot','Educação financeira pessoal e familiar','Controle financeiro com apps gratuitos (Mobilis, Minhas Economias)','Noções básicas de precificação e viabilidade do negócio']
+      [
+        'Identificar características e atitudes empreendedoras',
+        'Reconhecer o próprio potencial para empreender com base em experiências pessoais',
+        'Utilizar ferramentas digitais (mobile) para organização de ideias e metas (ex.: mapas mentais, quadros de tarefas)',
+        'Relacionar valores pessoais com o propósito de um negócio ou iniciativa',
+        'Aplicar ferramentas de ideação (ex.: Canvas simplificado) na elaboração de ideias de negócio',
+        'Realizar pesquisa de mercado utilizando canais digitais acessíveis',
+        'Identificar oportunidades e necessidades no entorno social para empreender',
+        'Utilizar plataformas digitais para captar e interpretar dados simples de mercado (ex.: Google Forms, enquetes no Instagram)',
+        'Aplicar estratégias de marketing digital e atendimento utilizando aplicativos móveis',
+        'Produzir conteúdo visual (fotos, vídeos, textos) de forma criativa para divulgar produtos ou serviços',
+        'Utilizar ferramentas digitais para edição e divulgação de forma simples e eficaz',
+        'Identificar boas práticas de comunicação com o cliente nos canais digitais (WhatsApp, Instagram, Facebook)',
+        'Organizar o orçamento pessoal e do pequeno negócio com base em aplicativos de finanças',
+        'Realizar registro básico de receitas e despesas',
+        'Identificar custos, calcular preço de venda e analisar viabilidade do produto/serviço',
+        'Aplicar princípios básicos de educação financeira na vida pessoal e profissional',
+        'Compreender e aplicar direitos trabalhistas básicos, incluindo saúde e segurança do trabalho, igualdade de gênero, e combate ao trabalho escravo e infantil',
+        'Relacionar práticas empreendedoras com responsabilidade social e legal, incorporando noções da CLT no cotidiano profissional',
+      ],
+      [
+        'Atitude Empreendedora e Autoconhecimento (5h)',
+        '• Características e atitudes empreendedoras',
+        '• Autoempreendedorismo: missão pessoal e valores',
+        '• Direitos fundamentais do trabalhador (CLT): saúde e segurança do trabalho, igualdade de gênero, combate ao trabalho escravo e infantil',
+        '• Introdução ao uso de ferramentas digitais (Canva e Trello mobile) para registro de ideias e organização de projetos',
+        'Empreendendo com o que tenho (10h)',
+        '• Ideação e modelagem simples de negócios (Canvas simplificado)',
+        '• Pesquisa de mercado com uso de redes sociais e aplicativos gratuitos (Google Forms, Instagram)',
+        '• Identificação de oportunidades locais',
+        '• Exemplos reais de pequenos empreendedores',
+        'Divulgação, Atendimento e Direitos na Prática Profissional (5h)',
+        '• Atendimento ao cliente com foco em canais digitais (WhatsApp Business, Instagram, delivery)',
+        '• Produção de conteúdo e divulgação mobile-first (fotos, vídeos e descrições)',
+        '• Aplicativos gratuitos para edição e divulgação (CapCut, Canva, InShot)',
+        '• Relação entre prática de atendimento, respeito aos direitos dos consumidores e práticas trabalhistas éticas e legais',
+        'Finanças Pessoais e do Negócio (4h)',
+        '• Educação financeira pessoal e familiar',
+        '• Controle financeiro com apps gratuitos (Mobilis, Minhas Economias)',
+        '• Noções básicas de precificação e viabilidade do negócio',
+      ]
     ))
   }
 
-  // Módulos específicos da IA
+  // Módulos específicos da IA — filtrar qualquer módulo de Empreender gerado pela IA
   ;(ai.modulos || []).forEach((modulo: any) => {
+    const nomeUpper = (modulo.nome || '').toUpperCase()
+    // Ignorar módulos de Empreender e Básico gerados pela IA (já inseridos manualmente acima)
+    if (
+      nomeUpper.includes('EMPREEND') ||
+      nomeUpper.includes('APRENDER') ||
+      nomeUpper === 'MÓDULO BÁSICO' ||
+      nomeUpper === 'MODULO BASICO'
+    ) return
     ;(modulo.ucs || []).forEach((uc: any) => {
       children.push(...ucTable(
         modulo.nome + (modulo.chModulo ? ` — ${modulo.chModulo}` : ''),
