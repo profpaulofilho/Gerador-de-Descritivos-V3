@@ -75,7 +75,7 @@ async function extractText(file: File) {
 }
 
 /* ── DOCX HELPERS ────────────────────────────────────────── */
-const BLUE = '154194'; const WHITE = 'FFFFFF'; const GRAY = 'D9D9D9'; const BLACK = '000000'
+const BLUE = '154194'; const WHITE = 'FFFFFF'; const GRAY = 'D9D9D9'; const BLACK = '000000'; const BLACK = '000000'
 const TW = 9026 // content width A4 with 1.27cm margins (DXA)
 
 function run(text: string, bold = false, size = 20, color = '000000') {
