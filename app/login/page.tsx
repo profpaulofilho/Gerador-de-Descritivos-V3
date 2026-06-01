@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth'
 import { auth } from '../../lib/firebase'
 
-const SENHA_PADRAO = 'Senai@2025'
+const SENHA_PADRAO = 'Senai@2026'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -49,9 +49,18 @@ export default function LoginPage() {
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (newPassword.length < 8) { setError('Mínimo 8 caracteres.'); return }
-    if (newPassword !== confirmPassword) { setError('As senhas não coincidem.'); return }
-    if (newPassword === SENHA_PADRAO) { setError('Não pode ser igual à senha padrão.'); return }
+    if (newPassword.length < 8) {
+      setError('A nova senha deve ter pelo menos 8 caracteres.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não coincidem.')
+      return
+    }
+    if (newPassword === SENHA_PADRAO) {
+      setError('A nova senha não pode ser igual à senha padrão.')
+      return
+    }
     setLoading(true)
     try {
       const user = auth.currentUser
@@ -59,7 +68,7 @@ export default function LoginPage() {
       await updatePassword(user, newPassword)
       router.replace('/app')
     } catch {
-      setError('Erro ao alterar senha.')
+      setError('Erro ao alterar senha. Tente fazer login novamente.')
       setLoading(false)
     }
   }
@@ -93,17 +102,31 @@ export default function LoginPage() {
               <form onSubmit={handleLogin}>
                 <div className="field">
                   <label>E-mail</label>
-                  <input type="email" required placeholder="nome@senai.br"
-                    value={email} onChange={e => setEmail(e.target.value)} />
+                  <input
+                    type="email"
+                    required
+                    placeholder="nome@senai.br"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
                 </div>
                 <div className="field">
                   <label>Senha</label>
-                  <input type="password" required placeholder="••••••••"
-                    value={password} onChange={e => setPassword(e.target.value)} />
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
                 </div>
                 {error && <div className="error-msg">{error}</div>}
-                <button className="primary-btn" disabled={loading} type="submit"
-                  style={{ width: '100%', marginTop: 8 }}>
+                <button
+                  className="primary-btn"
+                  disabled={loading}
+                  type="submit"
+                  style={{ width: '100%', marginTop: 8 }}
+                >
                   {loading ? 'Entrando...' : 'Entrar →'}
                 </button>
               </form>
@@ -112,21 +135,37 @@ export default function LoginPage() {
             <>
               <div className="login-card-eyebrow">Primeiro acesso</div>
               <h2>Crie sua nova senha</h2>
-              <p className="login-card-sub">Por segurança, defina uma senha pessoal.</p>
+              <p className="login-card-sub">
+                Por segurança, defina uma senha pessoal para continuar.
+              </p>
               <form onSubmit={handleChangePassword}>
                 <div className="field">
                   <label>Nova senha</label>
-                  <input type="password" required placeholder="Mínimo 8 caracteres"
-                    value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                  <input
+                    type="password"
+                    required
+                    placeholder="Mínimo 8 caracteres"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                  />
                 </div>
                 <div className="field">
                   <label>Confirmar nova senha</label>
-                  <input type="password" required placeholder="Repita a senha"
-                    value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                  <input
+                    type="password"
+                    required
+                    placeholder="Repita a senha"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                  />
                 </div>
                 {error && <div className="error-msg">{error}</div>}
-                <button className="primary-btn" disabled={loading} type="submit"
-                  style={{ width: '100%', marginTop: 8 }}>
+                <button
+                  className="primary-btn"
+                  disabled={loading}
+                  type="submit"
+                  style={{ width: '100%', marginTop: 8 }}
+                >
                   {loading ? 'Salvando...' : 'Salvar e entrar →'}
                 </button>
               </form>
