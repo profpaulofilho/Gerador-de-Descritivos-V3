@@ -162,12 +162,14 @@ a { color: inherit; text-decoration: none; }
   border-radius: 24px; padding: 36px; backdrop-filter: blur(24px);
   box-shadow: var(--shadow);
 }
-.login-card .eyebrow {
+.login-card-eyebrow {
   font-size: 10px; font-weight: 800; letter-spacing: .18em;
   text-transform: uppercase; color: var(--muted2); margin-bottom: 16px;
+  background: var(--input-bg); border: 1px solid var(--input-border);
+  border-radius: 20px; padding: 4px 12px; width: fit-content;
 }
 .login-card h2 { font-size: 26px; font-weight: 800; margin: 0 0 6px; }
-.login-card .sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+.login-card-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted2); margin-bottom: 6px; }
 .field input, .field select {
