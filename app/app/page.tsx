@@ -385,6 +385,15 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
 
 /* ── BUILD FICHA DOCX ────────────────────────────────────── */
 async function buildFichaDocx(ai: any, form: FichaForm) {
+  // Normalizar campos — a API pode retornar nomes ligeiramente diferentes
+  const nomeCurso    = ai.nome       || form.nome        || ''
+  const descricao    = ai.descricao  || ''
+  const cargaHoraria = ai.cargaHoraria || form.ch        || ''
+  const participantes= ai.participantes || ai.publicoAlvo || form.publico || ''
+  const certificado  = ai.certificado  || form.certificado || `Certificado de ${form.modalidade} em ${form.nome}`
+  const frequencia   = ai.frequencia   || form.frequencia  || '75%'
+  const programacao  = Array.isArray(ai.programacao) ? ai.programacao : []
+
   const children: any[] = [
     // Cabeçalho azul
     new Table({
@@ -395,25 +404,27 @@ async function buildFichaDocx(ai: any, form: FichaForm) {
         margins: { top: 160, bottom: 160, left: 200, right: 200 },
         children: [
           new Paragraph({ alignment: AlignmentType.CENTER, children: [run('SENAI BAHIA', true, 24, WHITE)] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 60 }, children: [run(ai.nome || form.nome, true, 32, WHITE)] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 60 }, children: [run(nomeCurso, true, 32, WHITE)] }),
         ],
       })]})],
     }),
     new Paragraph({ spacing: { before: 160, after: 80 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLUE } }, children: [run('DESCRIÇÃO DO CURSO', true, 22, BLUE)] }),
-    para(ai.descricao || ''),
-    new Paragraph({ spacing: { before: 60, after: 80 }, children: [run(`Carga horária: `, true, 20), run((ai.cargaHoraria || form.ch) + ';', false, 20)] }),
-    new Paragraph({ spacing: { before: 0, after: 60 }, children: [run('Participantes: ', true, 20), run(ai.participantes || form.publico || '', false, 20)] }),
+    para(descricao),
+    new Paragraph({ spacing: { before: 60, after: 80 }, children: [run('Carga horária: ', true, 20), run(cargaHoraria + ';', false, 20)] }),
+    new Paragraph({ spacing: { before: 0, after: 60 }, children: [run('Participantes: ', true, 20), run(participantes, false, 20)] }),
     new Paragraph({ spacing: { before: 0, after: 120 }, children: [
-      run(`Ao final do curso, os participantes que concluírem com frequência mínima de ${ai.frequencia || form.frequencia} e aproveitamento satisfatório receberão o `, false, 20),
-      run(ai.certificado || form.certificado || `Certificado de ${form.modalidade} em ${form.nome}`, true, 20),
+      run(`Ao final do curso, os participantes que concluírem com frequência mínima de ${frequencia} e aproveitamento satisfatório receberão o `, false, 20),
+      run(certificado, true, 20),
       run(', emitido pelo SENAI.', false, 20),
     ]}),
     new Paragraph({ spacing: { before: 160, after: 80 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLUE } }, children: [run('PROGRAMAÇÃO', true, 22, BLUE)] }),
   ]
 
-  ;(ai.programacao || []).forEach((modulo: any) => {
-    children.push(new Paragraph({ spacing: { before: 120, after: 60 }, children: [run('◆ ' + modulo.modulo, true, 22, BLUE)] }))
-    ;(modulo.topicos || []).forEach((t: string) => children.push(bullet(t)))
+  programacao.forEach((modulo: any) => {
+    const nomeModulo = modulo.modulo || modulo.nome || ''
+    const topicos = Array.isArray(modulo.topicos) ? modulo.topicos : []
+    children.push(new Paragraph({ spacing: { before: 120, after: 60 }, children: [run('◆ ' + nomeModulo, true, 22, BLUE)] }))
+    topicos.forEach((t: string) => children.push(bullet(t)))
   })
 
   return await Packer.toBlob(docxDoc(children))
@@ -502,13 +513,30 @@ export default function AppPage() {
     else { setFichaDocName(file.name); setFichaDocText(text) }
   }
 
-  async function generate() {
+  async function deleteHistoryItem(id: string) {
+    if (!user) return
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore')
+      await deleteDoc(doc(db, 'documentos', user.uid, 'gerados', id))
+      setHistory(prev => prev.filter(h => h.id !== id))
+    } catch { /* silencioso */ }
+  }
+
+  async function deleteAllHistory() {
+    if (!user) return
+    if (!confirm('Apagar todo o histórico? Esta ação não pode ser desfeita.')) return
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore')
+      await Promise.all(history.map(h => deleteDoc(doc(db, 'documentos', user.uid, 'gerados', h.id))))
+      setHistory([])
+    } catch { /* silencioso */ }
+  }
     if (!ready) return
     setLoading(true); setLogs([]); setResultLabel('')
     try {
-      log('Preparando dados...', 'info')
-      log(mode === 'descritivo' ? `Curso: ${desc.nomeCurso}` : `Ficha: ${ficha.nome}`, 'info')
-      log((mode === 'descritivo' ? docText : fichaDocText) ? 'Documento de referência carregado.' : 'Sem documento de referência.', 'info')
+      log('Preparando dados...', 'ok')
+      log(mode === 'descritivo' ? `Curso: ${desc.nomeCurso}` : `Ficha: ${ficha.nome}`, 'ok')
+      log((mode === 'descritivo' ? docText : fichaDocText) ? 'Documento de referência carregado.' : 'Sem documento de referência.', 'ok')
 
       const payload = mode === 'descritivo'
         ? { mode, form: { ...desc, chTotal }, documentText: docText }
@@ -520,10 +548,19 @@ export default function AppPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Erro ao gerar conteúdo.')
 
-      log('Montando DOCX...', 'ok')
+      const data = await response.json()
+
+      if (!response.ok) {
+        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error || data)
+        throw new Error(errMsg)
+      }
+
+      if (!data.result) throw new Error('A API não retornou resultado válido.')
+
+      log('Resposta recebida. ✓', 'ok')
+      log('Montando DOCX...', 'info')
+
       const blob = mode === 'descritivo'
         ? await buildDescritivoDocx(data.result, { ...desc, chTotal })
         : await buildFichaDocx(data.result, ficha)
@@ -532,11 +569,13 @@ export default function AppPage() {
         .replace(/[^a-zA-Z0-9\s-]/g, '').trim().replace(/\s+/g, '-')
       downloadBlob(blob, `${mode === 'descritivo' ? 'Descritivo' : 'Ficha-Produto'}-${baseName || 'SENAI'}.docx`)
 
-      log('Documento gerado e download iniciado.', 'ok')
+      log('Documento gerado. Download iniciado. ✓', 'ok')
       setResultLabel('Documento pronto!')
       await saveToFirestore(mode, mode === 'descritivo' ? desc.nomeCurso : ficha.nome, data.result)
+      log('Salvo no histórico Firebase. ✓', 'ok')
     } catch (error: any) {
-      log(error?.message || 'Erro inesperado.', 'err')
+      const msg = typeof error?.message === 'string' ? error.message : JSON.stringify(error)
+      log('Erro: ' + msg, 'err')
       setResultLabel('Não foi possível concluir.')
     } finally {
       setLoading(false)
@@ -678,7 +717,16 @@ export default function AppPage() {
 
           {history.length > 0 && (
             <div className="glass-panel history-panel">
-              <div className="section-head"><span>📋</span><div><h2>Histórico</h2><p>Documentos gerados e salvos no Firebase.</p></div></div>
+              <div className="section-head">
+                <span>📋</span>
+                <div><h2>Histórico</h2><p>Documentos gerados e salvos no Firebase.</p></div>
+                <button
+                  onClick={deleteAllHistory}
+                  style={{ marginLeft: 'auto', background: 'none', border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '4px 12px', color: 'var(--senai-red)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  🗑️ Limpar tudo
+                </button>
+              </div>
               <div className="history-list">
                 {history.slice(0, 10).map(item => (
                   <div className="history-item" key={item.id}>
@@ -687,6 +735,11 @@ export default function AppPage() {
                       <div className="h-meta">{item.criadoEm?.toDate?.()?.toLocaleString('pt-BR') || '—'}</div>
                     </div>
                     <span className="h-type">{item.tipo}</span>
+                    <button
+                      onClick={() => deleteHistoryItem(item.id)}
+                      title="Apagar este registro"
+                      style={{ background: 'none', border: 'none', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16, padding: '0 4px', flexShrink: 0 }}
+                    >✕</button>
                   </div>
                 ))}
               </div>
