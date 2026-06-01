@@ -47,11 +47,9 @@ export default function LoginPage() {
           </div>
 
           <div className="eyebrow">IA institucional segura</div>
-          <h1>
-            Descritivos e fichas de produto <span>em padrão SENAI</span>
-          </h1>
+         <h1>Descritivos e fichas de produto <span>em padrão SENAI</span></h1>
           <p>
-            Uma interface moderna para gerar documentos pedagógicos com Claude,
+            Uma interface moderna para gerar documentos pedagógicos com
             upload de referências, EJA Profissionalizante e conteúdo atualizado de
             Aprender a Empreender.
           </p>
@@ -100,7 +98,7 @@ export default function LoginPage() {
           </form>
 
           <div className="security-note">
-            <span>✓</span> A chave Anthropic fica protegida nas variáveis da Vercel.
+            <span>✓</span> Ambiente protegido.
           </div>
         </section>
       </div>
