@@ -582,7 +582,7 @@ export default function AppPage() {
     } finally {
       setLoading(false)
     }
- }
+  }
 }
   if (checking) return <main className="app-loading">Carregando...</main>
 
