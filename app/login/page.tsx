@@ -53,13 +53,6 @@ export default function LoginPage() {
             upload de referências, EJA Profissionalizante e conteúdo atualizado de
             Aprender a Empreender.
           </p>
-
-          <div className="feature-grid compact">
-            <div><b>🔐</b><span>Login Firebase</span></div>
-            <div><b>🧠</b><span>Claude via API segura</span></div>
-            <div><b>📎</b><span>DOCX, PDF e TXT</span></div>
-            <div><b>🗂️</b><span>Ficha de Produto</span></div>
-          </div>
         </section>
 
         <section className="login-card glass-panel">
