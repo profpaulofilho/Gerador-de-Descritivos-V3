@@ -531,7 +531,8 @@ export default function AppPage() {
       setHistory([])
     } catch { /* silencioso */ }
   }
-    if (!ready) return
+
+  async function generate() {
     setLoading(true); setLogs([]); setResultLabel('')
     try {
       log('Preparando dados...', 'ok')
