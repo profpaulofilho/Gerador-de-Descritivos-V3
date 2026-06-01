@@ -73,10 +73,10 @@ async function extractText(file: File) {
 }
 
 /* ── DOCX HELPERS ────────────────────────────────────────── */
-const BLUE = '154194'; const WHITE = 'FFFFFF'; const GRAY = 'D9D9D9'
+const BLUE = '154194'; const WHITE = 'FFFFFF'; const GRAY = 'D9D9D9'; const BLACK = '000000'
 const TW = 9026 // content width A4 with 1.27cm margins (DXA)
 
-function run(text: string, bold = false, size = 20, color = '111827') {
+function run(text: string, bold = false, size = 20, color = '000000') {
   return new TextRun({ text, bold, size, color, font: 'Arial' })
 }
 function para(text: string, bold = false, justify = true) {
@@ -89,7 +89,6 @@ function para(text: string, bold = false, justify = true) {
 function sectionTitle(num: string, text: string) {
   return new Paragraph({
     spacing: { before: 240, after: 120 },
-    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLUE } },
     children: [run(`${num}. ${text.toUpperCase()}`, true, 24, BLUE)],
   })
 }
@@ -117,14 +116,14 @@ function idTable(rows: [string, string][]) {
     rows: rows.map(([k, v]) => new TableRow({ children: [
       new TableCell({
         borders: bAll(BLUE), width: { size: 3200, type: WidthType.DXA },
-        shading: { fill: BLUE, type: ShadingType.CLEAR },
+        shading: { fill: 'FFFFFF', type: ShadingType.CLEAR },
         margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({ children: [run(k, true, 18, WHITE)] })],
+        children: [new Paragraph({ children: [run(k, true, 20, BLACK)] })],
       }),
       new TableCell({
         borders: bAll(BLUE), width: { size: TW - 3200, type: WidthType.DXA },
         margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({ children: [run(v || '', false, 20)] })],
+        children: [new Paragraph({ children: [run(v || '', false, 20, BLACK)] })],
       }),
     ]})),
   })
@@ -138,10 +137,10 @@ function ucTable(moduloNome: string, ucNome: string, ch: string, objetivo: strin
     new Table({
       width: { size: TW, type: WidthType.DXA }, columnWidths: [TW],
       rows: [new TableRow({ children: [new TableCell({
-        borders: bAll(BLUE), width: { size: TW, type: WidthType.DXA },
-        shading: { fill: BLUE, type: ShadingType.CLEAR },
+        borders: bAll('AAAAAA'), width: { size: TW, type: WidthType.DXA },
+        shading: { fill: 'D9D9D9', type: ShadingType.CLEAR },
         margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [run(moduloNome, true, 22, WHITE)] })],
+        children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [run(moduloNome, true, 22, BLACK)] })],
       })]})],
     }),
     // UC name / ch / objetivo
@@ -191,7 +190,7 @@ function equipTable(rows: [string, string][]) {
 function docxDoc(children: any[]) {
   return new Document({
     numbering: { config: [{ reference: 'bullets', levels: [{ level: 0, format: LevelFormat.BULLET, text: '\u2022', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 260 } } } }] }] },
-    styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
+    styles: { default: { document: { run: { font: 'Arial', size: 20, color: '000000' } } } },
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1800, bottom: 1134, left: 1800 } } }, children }],
   })
 }
