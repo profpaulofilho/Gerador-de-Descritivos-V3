@@ -1,4 +1,3 @@
-// v3.1.0 - build fix
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -13,7 +12,6 @@ import {
 } from 'docx'
 import * as mammoth from 'mammoth'
 
-/* ── TYPES ──────────────────────────────────────────────── */
 type Mode = 'descritivo' | 'ficha'
 type LogKind = 'ok' | 'err' | 'info'
 type LogItem = { text: string; type?: LogKind }
@@ -26,7 +24,7 @@ type DescritivoForm = {
   moduloBasico: boolean; aprenderEmpreender: boolean; aprenderEmpreenderCh: string
   eja: boolean; numUC: string; usarNomesUC: boolean
   ucs: { nome: string; ch: string }[]
-  chTotal?: string // calculado automaticamente
+  chTotal?: string
 }
 type FichaForm = {
   nome: string; ch: string; modalidade: string; eixo: string
@@ -49,7 +47,6 @@ const defaultFicha: FichaForm = {
 const modalidades = ['Qualificação Profissional','Aperfeiçoamento Profissional','Aprendizagem Industrial','Habilitação Profissional']
 const eixos = ['Ambiente e Saúde','Controle e Processos Industriais','Gestão e Negócios','Informação e Comunicação','Infraestrutura','Produção Alimentícia','Produção Cultural e Design','Produção Industrial','Recursos Naturais','Segurança','Turismo, Hospitalidade e Lazer']
 
-/* ── FILE EXTRACTION ─────────────────────────────────────── */
 async function extractText(file: File) {
   const name = file.name.toLowerCase()
   if (name.endsWith('.txt')) return await file.text()
@@ -74,9 +71,8 @@ async function extractText(file: File) {
   return ''
 }
 
-/* ── DOCX HELPERS ────────────────────────────────────────── */
-const BLUE = '154194'; const WHITE = 'FFFFFF'; const GRAY = 'D9D9D9'; const BLACK = '000000'; const BLACK = '000000'
-const TW = 9026 // content width A4 with 1.27cm margins (DXA)
+const BLUE = '154194'; const WHITE = 'FFFFFF'; const GRAY = 'D9D9D9'; const BLACK = '000000'
+const TW = 9026
 
 function run(text: string, bold = false, size = 20, color = '000000') {
   return new TextRun({ text, bold, size, color, font: 'Arial' })
@@ -104,13 +100,12 @@ function bullet(text: string) {
   return new Paragraph({
     numbering: { reference: 'bullets', level: 0 },
     spacing: { before: 30, after: 30 },
-    children: [run(text, false, 20)],
+    children: [run(text, false, 20, BLACK)],
   })
 }
 function bS(c = 'AAAAAA') { return { style: BorderStyle.SINGLE, size: 4, color: c } }
 function bAll(c = 'AAAAAA') { return { top: bS(c), bottom: bS(c), left: bS(c), right: bS(c) } }
 
-/* tabela de identificação 2 colunas */
 function idTable(rows: [string, string][]) {
   return new Table({
     width: { size: TW, type: WidthType.DXA },
@@ -131,11 +126,9 @@ function idTable(rows: [string, string][]) {
   })
 }
 
-/* tabela UC com capacidades e conhecimentos */
 function ucTable(moduloNome: string, ucNome: string, ch: string, objetivo: string, capacidades: string[], conhecimentos: string[]) {
   const half = Math.floor(TW / 2)
   return [
-    // header módulo
     new Table({
       width: { size: TW, type: WidthType.DXA }, columnWidths: [TW],
       rows: [new TableRow({ children: [new TableCell({
@@ -145,26 +138,24 @@ function ucTable(moduloNome: string, ucNome: string, ch: string, objetivo: strin
         children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [run(moduloNome, true, 22, BLACK)] })],
       })]})],
     }),
-    // UC name / ch / objetivo
     new Table({
       width: { size: TW, type: WidthType.DXA }, columnWidths: [TW],
       rows: [
-        new TableRow({ children: [new TableCell({ borders: bAll(), width: { size: TW, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('Unidade Curricular: ', true, 20), run(ucNome, false, 20)] })] })]}),
-        new TableRow({ children: [new TableCell({ borders: bAll(), width: { size: TW, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('Carga Horária: ', true, 20), run(ch, false, 20)] })] })]}),
-        new TableRow({ children: [new TableCell({ borders: bAll(), width: { size: TW, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('Objetivo Geral: ', true, 20), run(objetivo, false, 20)] })] })]}),
+        new TableRow({ children: [new TableCell({ borders: bAll('CCCCCC'), width: { size: TW, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('Unidade Curricular: ', true, 20, BLACK), run(ucNome, false, 20, BLACK)] })] })]}),
+        new TableRow({ children: [new TableCell({ borders: bAll('CCCCCC'), width: { size: TW, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('Carga Horária: ', true, 20, BLACK), run(ch, false, 20, BLACK)] })] })]}),
+        new TableRow({ children: [new TableCell({ borders: bAll('CCCCCC'), width: { size: TW, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('Objetivo Geral: ', true, 20, BLACK), run(objetivo, false, 20, BLACK)] })] })]}),
       ],
     }),
-    // header capacidades / conhecimentos
     new Table({
       width: { size: TW, type: WidthType.DXA }, columnWidths: [half, TW - half],
       rows: [
         new TableRow({ children: [
-          new TableCell({ borders: bAll(GRAY), width: { size: half, type: WidthType.DXA }, shading: { fill: GRAY, type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('CAPACIDADES BÁSICAS', true, 20)] })] }),
-          new TableCell({ borders: bAll(GRAY), width: { size: TW - half, type: WidthType.DXA }, shading: { fill: GRAY, type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('CONHECIMENTOS', true, 20)] })] }),
+          new TableCell({ borders: bAll('AAAAAA'), width: { size: half, type: WidthType.DXA }, shading: { fill: 'D9D9D9', type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('CAPACIDADES BÁSICAS', true, 20, BLACK)] })] }),
+          new TableCell({ borders: bAll('AAAAAA'), width: { size: TW - half, type: WidthType.DXA }, shading: { fill: 'D9D9D9', type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [new Paragraph({ children: [run('CONHECIMENTOS', true, 20, BLACK)] })] }),
         ]}),
         new TableRow({ children: [
-          new TableCell({ borders: bAll(), width: { size: half, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: capacidades.map(c => new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { before: 20, after: 20 }, children: [run(c, false, 18)] })) }),
-          new TableCell({ borders: bAll(), width: { size: TW - half, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: conhecimentos.map(c => new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { before: 20, after: 20 }, children: [run(c, false, 18)] })) }),
+          new TableCell({ borders: bAll('CCCCCC'), width: { size: half, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: capacidades.map(c => new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { before: 20, after: 20 }, children: [run(c, false, 18, BLACK)] })) }),
+          new TableCell({ borders: bAll('CCCCCC'), width: { size: TW - half, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: conhecimentos.map(c => new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { before: 20, after: 20 }, children: [run(c, false, 18, BLACK)] })) }),
         ]}),
       ],
     }),
@@ -172,18 +163,17 @@ function ucTable(moduloNome: string, ucNome: string, ch: string, objetivo: strin
   ]
 }
 
-/* tabela equipamentos */
 function equipTable(rows: [string, string][]) {
   return new Table({
     width: { size: TW, type: WidthType.DXA }, columnWidths: [6200, TW - 6200],
     rows: [
       new TableRow({ children: [
-        new TableCell({ borders: bAll(GRAY), shading: { fill: GRAY, type: ShadingType.CLEAR }, width: { size: 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run('Equipamento', true, 18)] })] }),
-        new TableCell({ borders: bAll(GRAY), shading: { fill: GRAY, type: ShadingType.CLEAR }, width: { size: TW - 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run('Qtd. Mínima', true, 18)] })] }),
+        new TableCell({ borders: bAll('AAAAAA'), shading: { fill: 'D9D9D9', type: ShadingType.CLEAR }, width: { size: 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run('Equipamento', true, 18, BLACK)] })] }),
+        new TableCell({ borders: bAll('AAAAAA'), shading: { fill: 'D9D9D9', type: ShadingType.CLEAR }, width: { size: TW - 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run('Qtd. Mínima', true, 18, BLACK)] })] }),
       ]}),
       ...rows.map(([eq, qt]) => new TableRow({ children: [
-        new TableCell({ borders: bAll(), width: { size: 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run(eq, false, 18)] })] }),
-        new TableCell({ borders: bAll(), width: { size: TW - 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run(qt, false, 18)] })] }),
+        new TableCell({ borders: bAll('CCCCCC'), width: { size: 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run(eq, false, 18, BLACK)] })] }),
+        new TableCell({ borders: bAll('CCCCCC'), width: { size: TW - 6200, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [run(qt, false, 18, BLACK)] })] }),
       ]})),
     ],
   })
@@ -197,14 +187,12 @@ function docxDoc(children: any[]) {
   })
 }
 
-/* ── BUILD DESCRITIVO DOCX ───────────────────────────────── */
 async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
+  const cH = form.chTotal || form.cargaHoraria
   const children: any[] = [
-    // Cabeçalho
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [run('SENAI BAHIA', true, 36, BLUE)] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [run(form.eixo.toUpperCase(), true, 22, BLUE)] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 280 }, children: [run('DESCRITIVO DE CURSO', true, 30, BLUE)] }),
-
     sectionTitle('1', 'IDENTIFICAÇÃO'),
     new Paragraph({ spacing: { before: 80, after: 80 }, children: [] }),
     idTable([
@@ -213,105 +201,49 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
       ['MODALIDADE:', form.modalidade],
       ['EIXO TECNOLÓGICO:', form.eixo],
       ['CLIENTE:', form.cliente || ''],
-      ['CARGA HORÁRIA:', form.chTotal || form.cargaHoraria],
+      ['CARGA HORÁRIA:', cH],
     ]),
-
-    sectionTitle('2', 'JUSTIFICATIVA'),
-    para(ai.justificativa),
-    subTitle('2.1 OBJETIVO:'),
-    para(ai.objetivo),
-    subTitle('2.2 DESCRIÇÃO DO CURSO'),
-    para(ai.descricao),
-    subTitle('2.3 PÚBLICO-ALVO'),
-    para(ai.publicoAlvo),
-
+    sectionTitle('2', 'JUSTIFICATIVA'), para(ai.justificativa),
+    subTitle('2.1 OBJETIVO:'), para(ai.objetivo),
+    subTitle('2.2 DESCRIÇÃO DO CURSO'), para(ai.descricao),
+    subTitle('2.3 PÚBLICO-ALVO'), para(ai.publicoAlvo),
     sectionTitle('3', 'REQUISITOS DE ACESSO OBRIGATÓRIO'),
     para(`Escolaridade mínima: ${form.escolaridade}.`),
     para(`Idade mínima: ${form.eja ? '18' : form.idadeMinima} anos.`),
     ...(form.eja ? [para('Não ter concluído o Ensino Médio.'), para('Estar apto à matrícula na EJA Profissionalizante SESI/SENAI.')] : []),
     ...(form.requisitos ? [para(form.requisitos)] : []),
-
     sectionTitle('4', 'PERFIL PROFISSIONAL DE CONCLUSÃO'),
     para('O egresso será capaz de:'),
     ...(ai.perfilSaida || []).map((item: string) => bullet(item)),
-
     sectionTitle('5', 'ORGANIZAÇÃO CURRICULAR'),
     subTitle('5.1 UNIDADES CURRICULARES, CARGAS HORÁRIAS E CONTEÚDOS FORMATIVOS:'),
     new Paragraph({ spacing: { before: 80, after: 80 }, children: [] }),
   ]
 
-  // Módulo Básico — ANTES do Aprender a Empreender
   if (form.moduloBasico) {
     const basicUcs = [
-      { nome: 'Sustentabilidade nos Processos Industriais', ch: '8h', objetivo: 'Desenvolver a capacidade do estudante de aplicar práticas de sustentabilidade em processos industriais, identificando impactos ambientais e propondo soluções sustentáveis.', cap: ['Identificar impactos ambientais de processos produtivos', 'Aplicar práticas de economia circular no contexto industrial', 'Propor soluções de redução de resíduos e consumo', 'Implementar princípios de gestão ambiental'], con: ['Conceitos de sustentabilidade e desenvolvimento sustentável', 'Legislação ambiental brasileira', 'ISO 14001 — Gestão ambiental', 'Economia circular e logística reversa', 'Poluição industrial e tratamento de resíduos', 'Boas práticas ambientais na indústria'] },
-      { nome: 'Saúde e Segurança no Trabalho', ch: '12h', objetivo: 'Capacitar o estudante a identificar e aplicar normas de saúde e segurança do trabalho, prevenindo riscos e promovendo ambientes laborais seguros.', cap: ['Identificar riscos e perigos no ambiente de trabalho', 'Aplicar normas regulamentadoras pertinentes à área', 'Utilizar corretamente EPIs e EPCs', 'Adotar posturas ergonômicas e práticas seguras'], con: ['Normas Regulamentadoras NR-01 a NR-06', 'CIPA — Comissão Interna de Prevenção de Acidentes', 'EPIs e EPCs: tipos e uso correto', 'Ergonomia e doenças ocupacionais', 'SIPAT e programas de segurança', 'Legislação trabalhista básica — CLT'] },
-      { nome: 'Fundamentos da Qualidade e Produtividade', ch: '8h', objetivo: 'Desenvolver compreensão sobre qualidade, produtividade e melhoria contínua nos processos industriais.', cap: ['Identificar conceitos e ferramentas de qualidade', 'Aplicar técnicas de melhoria contínua', 'Analisar indicadores de produtividade', 'Reconhecer padrões de qualidade aplicados à área'], con: ['Conceitos de qualidade total (TQM)', 'Ferramentas da qualidade: 5S, PDCA, Ishikawa', 'Indicadores de produtividade', 'ISO 9001 — Sistemas de gestão da qualidade', 'Padronização de processos', 'Kaizen e melhoria contínua'] },
-      { nome: 'Fundamentos da Indústria 4.0', ch: '12h', objetivo: 'Apresentar os princípios e tecnologias da Indústria 4.0 e sua aplicação nos processos produtivos modernos.', cap: ['Identificar as principais tecnologias da Indústria 4.0', 'Relacionar transformação digital com o setor produtivo', 'Reconhecer aplicações de IoT e automação', 'Compreender o impacto das tecnologias digitais no trabalho'], con: ['Conceito e pilares da Indústria 4.0', 'Internet das Coisas (IoT) aplicada à indústria', 'Big Data e Analytics', 'Inteligência Artificial e Machine Learning', 'Computação em nuvem', 'Cibersegurança industrial', 'Impressão 3D e manufatura aditiva'] },
+      { nome: 'Sustentabilidade nos Processos Industriais', ch: '8h', objetivo: 'Desenvolver a capacidade do estudante de aplicar práticas de sustentabilidade em processos industriais.', cap: ['Identificar impactos ambientais de processos produtivos','Aplicar práticas de economia circular no contexto industrial','Propor soluções de redução de resíduos e consumo','Implementar princípios de gestão ambiental'], con: ['Conceitos de sustentabilidade e desenvolvimento sustentável','Legislação ambiental brasileira','ISO 14001 — Gestão ambiental','Economia circular e logística reversa','Poluição industrial e tratamento de resíduos','Boas práticas ambientais na indústria'] },
+      { nome: 'Saúde e Segurança no Trabalho', ch: '12h', objetivo: 'Capacitar o estudante a identificar e aplicar normas de saúde e segurança do trabalho.', cap: ['Identificar riscos e perigos no ambiente de trabalho','Aplicar normas regulamentadoras pertinentes à área','Utilizar corretamente EPIs e EPCs','Adotar posturas ergonômicas e práticas seguras'], con: ['Normas Regulamentadoras NR-01 a NR-06','CIPA — Comissão Interna de Prevenção de Acidentes','EPIs e EPCs: tipos e uso correto','Ergonomia e doenças ocupacionais','SIPAT e programas de segurança','Legislação trabalhista básica — CLT'] },
+      { nome: 'Fundamentos da Qualidade e Produtividade', ch: '8h', objetivo: 'Desenvolver compreensão sobre qualidade, produtividade e melhoria contínua.', cap: ['Identificar conceitos e ferramentas de qualidade','Aplicar técnicas de melhoria contínua','Analisar indicadores de produtividade','Reconhecer padrões de qualidade aplicados à área'], con: ['Conceitos de qualidade total (TQM)','Ferramentas da qualidade: 5S, PDCA, Ishikawa','Indicadores de produtividade','ISO 9001 — Sistemas de gestão da qualidade','Padronização de processos','Kaizen e melhoria contínua'] },
+      { nome: 'Fundamentos da Indústria 4.0', ch: '12h', objetivo: 'Apresentar os princípios e tecnologias da Indústria 4.0 e sua aplicação.', cap: ['Identificar as principais tecnologias da Indústria 4.0','Relacionar transformação digital com o setor produtivo','Reconhecer aplicações de IoT e automação','Compreender o impacto das tecnologias digitais no trabalho'], con: ['Conceito e pilares da Indústria 4.0','Internet das Coisas (IoT) aplicada à indústria','Big Data e Analytics','Inteligência Artificial e Machine Learning','Computação em nuvem','Cibersegurança industrial','Impressão 3D e manufatura aditiva'] },
     ]
     basicUcs.forEach(uc => children.push(...ucTable('MÓDULO BÁSICO', uc.nome, uc.ch, uc.objetivo, uc.cap, uc.con)))
   }
 
-  // Módulo Aprender a Empreender — SEMPRE PRIMEIRO, conteúdo completo do documento atualizado
   if (form.aprenderEmpreender) {
     const chEmp = form.aprenderEmpreenderCh + 'h'
     children.push(...ucTable(
       'MÓDULO APRENDER A EMPREENDER',
       'Aprender a Empreender', chEmp,
-      'Desenvolver atitudes empreendedoras e aplicar conhecimentos básicos de marketing, finanças e inovação, com uso de tecnologias digitais acessíveis, para planejar e divulgar pequenos negócios ou soluções criativas voltadas à realidade socioprofissional.',
-      [
-        'Identificar características e atitudes empreendedoras',
-        'Reconhecer o próprio potencial para empreender com base em experiências pessoais',
-        'Utilizar ferramentas digitais (mobile) para organização de ideias e metas (ex.: mapas mentais, quadros de tarefas)',
-        'Relacionar valores pessoais com o propósito de um negócio ou iniciativa',
-        'Aplicar ferramentas de ideação (ex.: Canvas simplificado) na elaboração de ideias de negócio',
-        'Realizar pesquisa de mercado utilizando canais digitais acessíveis',
-        'Identificar oportunidades e necessidades no entorno social para empreender',
-        'Utilizar plataformas digitais para captar e interpretar dados simples de mercado (ex.: Google Forms, enquetes no Instagram)',
-        'Aplicar estratégias de marketing digital e atendimento utilizando aplicativos móveis',
-        'Produzir conteúdo visual (fotos, vídeos, textos) de forma criativa para divulgar produtos ou serviços',
-        'Utilizar ferramentas digitais para edição e divulgação de forma simples e eficaz',
-        'Identificar boas práticas de comunicação com o cliente nos canais digitais (WhatsApp, Instagram, Facebook)',
-        'Organizar o orçamento pessoal e do pequeno negócio com base em aplicativos de finanças',
-        'Realizar registro básico de receitas e despesas',
-        'Identificar custos, calcular preço de venda e analisar viabilidade do produto/serviço',
-        'Aplicar princípios básicos de educação financeira na vida pessoal e profissional',
-        'Compreender e aplicar direitos trabalhistas básicos, incluindo saúde e segurança do trabalho, igualdade de gênero, e combate ao trabalho escravo e infantil',
-        'Relacionar práticas empreendedoras com responsabilidade social e legal, incorporando noções da CLT no cotidiano profissional',
-      ],
-      [
-        'Atitude Empreendedora e Autoconhecimento (5h)',
-        '• Características e atitudes empreendedoras',
-        '• Autoempreendedorismo: missão pessoal e valores',
-        '• Direitos fundamentais do trabalhador (CLT): saúde e segurança do trabalho, igualdade de gênero, combate ao trabalho escravo e infantil',
-        '• Introdução ao uso de ferramentas digitais (Canva e Trello mobile) para registro de ideias e organização de projetos',
-        'Empreendendo com o que tenho (10h)',
-        '• Ideação e modelagem simples de negócios (Canvas simplificado)',
-        '• Pesquisa de mercado com uso de redes sociais e aplicativos gratuitos (Google Forms, Instagram)',
-        '• Identificação de oportunidades locais',
-        '• Exemplos reais de pequenos empreendedores',
-        'Divulgação, Atendimento e Direitos na Prática Profissional (5h)',
-        '• Atendimento ao cliente com foco em canais digitais (WhatsApp Business, Instagram, delivery)',
-        '• Produção de conteúdo e divulgação mobile-first (fotos, vídeos e descrições)',
-        '• Aplicativos gratuitos para edição e divulgação (CapCut, Canva, InShot)',
-        '• Relação entre prática de atendimento, respeito aos direitos dos consumidores e práticas trabalhistas éticas e legais',
-        'Finanças Pessoais e do Negócio (4h)',
-        '• Educação financeira pessoal e familiar',
-        '• Controle financeiro com apps gratuitos (Mobilis, Minhas Economias)',
-        '• Noções básicas de precificação e viabilidade do negócio',
-      ]
+      'Desenvolver atitudes empreendedoras e aplicar conhecimentos básicos de marketing, finanças e inovação, com uso de tecnologias digitais acessíveis.',
+      ['Identificar características e atitudes empreendedoras','Reconhecer o próprio potencial para empreender com base em experiências pessoais','Utilizar ferramentas digitais (mobile) para organização de ideias e metas','Relacionar valores pessoais com o propósito de um negócio ou iniciativa','Aplicar ferramentas de ideação (Canvas simplificado)','Realizar pesquisa de mercado utilizando canais digitais acessíveis','Identificar oportunidades e necessidades no entorno social para empreender','Aplicar estratégias de marketing digital utilizando aplicativos móveis','Produzir conteúdo visual para divulgar produtos ou serviços','Organizar orçamento pessoal e do pequeno negócio','Identificar custos, calcular preço de venda e analisar viabilidade','Compreender e aplicar direitos trabalhistas básicos'],
+      ['Atitude Empreendedora e Autoconhecimento (5h)','Características e atitudes empreendedoras','Autoempreendedorismo: missão pessoal e valores','Direitos fundamentais do trabalhador (CLT)','Ferramentas digitais: Canva e Trello mobile','Empreendendo com o que tenho (10h)','Ideação e modelagem simples de negócios (Canvas simplificado)','Pesquisa de mercado com redes sociais e apps gratuitos','Identificação de oportunidades locais','Divulgação, Atendimento e Direitos (5h)','Atendimento ao cliente em canais digitais','Produção de conteúdo mobile-first','Apps gratuitos: CapCut, Canva, InShot','Finanças Pessoais e do Negócio (4h)','Educação financeira pessoal e familiar','Controle financeiro com apps gratuitos','Noções básicas de precificação e viabilidade']
     ))
   }
 
-  // Módulos específicos da IA — filtrar qualquer módulo de Empreender gerado pela IA
   ;(ai.modulos || []).forEach((modulo: any) => {
     const nomeUpper = (modulo.nome || '').toUpperCase()
-    // Ignorar módulos de Empreender e Básico gerados pela IA (já inseridos manualmente acima)
-    if (
-      nomeUpper.includes('EMPREEND') ||
-      nomeUpper.includes('APRENDER') ||
-      nomeUpper === 'MÓDULO BÁSICO' ||
-      nomeUpper === 'MODULO BASICO'
-    ) return
+    if (nomeUpper.includes('EMPREEND') || nomeUpper.includes('APRENDER') || nomeUpper === 'MÓDULO BÁSICO' || nomeUpper === 'MODULO BASICO') return
     ;(modulo.ucs || []).forEach((uc: any) => {
       children.push(...ucTable(
         modulo.nome + (modulo.chModulo ? ` — ${modulo.chModulo}` : ''),
@@ -321,20 +253,19 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
     })
   })
 
-  // Seções seguintes
   children.push(
     sectionTitle('6', 'METODOLOGIA E ESTRATÉGIAS PEDAGÓGICAS'), para(ai.metodologia),
     sectionTitle('7', 'BIBLIOTECA, INSTALAÇÕES E EQUIPAMENTOS'),
-    para('A Biblioteca deverá ser adequada, quando necessária, para o referido curso. Será disponibilizada a sistemática de biblioteca (itinerante) e do acervo bibliográfico. Os alunos receberão material didático para cada Unidade Curricular do curso.'),
+    para('A Biblioteca deverá ser adequada, quando necessária, para o referido curso. Os alunos receberão material didático para cada Unidade Curricular do curso.'),
     sectionTitle('8', 'CRITÉRIOS DE AVALIAÇÃO'),
     para(form.eja
-      ? 'A avaliação será processual e contínua, com instrumentos diversificados: situações de aprendizagem, projetos integradores, portfólios, estudos de caso, avaliações práticas e autoavaliação por rubricas. Será considerado aprovado o aluno que alcançar nota igual ou superior a 5,0 (cinco) e frequência mínima de 75% (setenta e cinco por cento), conforme diretrizes do EJA Profissionalizante SESI/SENAI.'
-      : 'A avaliação será processual e contínua, envolverá os aspectos qualitativos e quantitativos. Avaliação formativa por meio de exercícios práticos, desenvolvimento de projetos, participação nas discussões e apresentação de portfólio. Será considerado aprovado por média final, o aluno que alcançar nota igual ou superior a 7,0 (sete) e frequência mínima de 75% (setenta e cinco por cento) no curso, conforme diretrizes do Regimento Comum das Escolas Técnicas do SENAI DR-BA.'),
+      ? 'A avaliação será processual e contínua, com instrumentos diversificados. Será considerado aprovado o aluno que alcançar nota igual ou superior a 5,0 e frequência mínima de 75%, conforme diretrizes do EJA Profissionalizante SESI/SENAI.'
+      : 'A avaliação será processual e contínua. Será considerado aprovado por média final, o aluno que alcançar nota igual ou superior a 7,0 e frequência mínima de 75%, conforme diretrizes do Regimento Comum das Escolas Técnicas do SENAI DR-BA.'),
     sectionTitle('9', 'PERFIL DOCENTE'), para(ai.perfilDocente),
     sectionTitle('10', 'CRITÉRIOS DE CERTIFICAÇÃO'),
     para(`O certificado de ${form.modalidade} em ${form.nomeCurso} será conferido ao aluno que obtiver média de aproveitamento e índice de frequência estabelecido nos critérios de avaliação.`),
     subTitle('10.1 CONTEÚDO DO CERTIFICADO:'),
-    new Paragraph({ spacing: { before: 60, after: 40 }, children: [run(`${form.modalidade} em ${form.nomeCurso} — ${form.chTotal || form.cargaHoraria}`, true, 22)] }),
+    new Paragraph({ spacing: { before: 60, after: 40 }, children: [run(`${form.modalidade} em ${form.nomeCurso} — ${cH}`, true, 22)] }),
   )
 
   if (form.moduloBasico) {
@@ -345,12 +276,14 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
     children.push(new Paragraph({ spacing: { before: 60, after: 30 }, children: [run(`MÓDULO APRENDER A EMPREENDER — ${form.aprenderEmpreenderCh}h`, true, 20)] }))
     children.push(para(`Aprender a Empreender — ${form.aprenderEmpreenderCh}h`))
   }
-  ;(ai.modulos || []).forEach((m: any) => {
+  ;(ai.modulos || []).filter((m: any) => {
+    const n = (m.nome || '').toUpperCase()
+    return !n.includes('EMPREEND') && !n.includes('APRENDER') && n !== 'MÓDULO BÁSICO' && n !== 'MODULO BASICO'
+  }).forEach((m: any) => {
     children.push(new Paragraph({ spacing: { before: 60, after: 30 }, children: [run(`${m.nome} — ${m.chModulo || ''}`, true, 20)] }))
     ;(m.ucs || []).forEach((u: any) => children.push(para(`${u.nome} — ${u.ch || ''}`)))
   })
 
-  // Infraestrutura
   const infra = ai.infraestrutura || {}
   children.push(
     sectionTitle('11', 'INFRAESTRUTURA MÍNIMA RECOMENDADA'),
@@ -361,8 +294,7 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
     equipTable(infra.equipamentos || []),
     subTitle('11.3 Softwares:'),
     ...(infra.softwares || []).map((s: string) => bullet(s)),
-    subTitle('11.4 Materiais Didáticos:'),
-    para(infra.materiais || ''),
+    subTitle('11.4 Materiais Didáticos:'), para(infra.materiais || ''),
     subTitle('11.5 EPIs e Segurança:'),
     ...(infra.epis || []).map((e: string) => bullet(e)),
     subTitle('11.6 Conectividade:'),
@@ -371,32 +303,27 @@ async function buildDescritivoDocx(ai: any, form: DescritivoForm) {
     ...(ai.referencias || []).map((r: string) => para(r)),
   )
 
-  // EJA
-  if (form.eja && ai.eja?.aplicar) {
+  if (form.eja && ai.eja) {
     children.push(
       sectionTitle('13', 'DIRETRIZES ESPECÍFICAS DO EJA PROFISSIONALIZANTE'),
       para(ai.eja.diretrizes || ''),
       ...(ai.eja.atividadesAssincronas || []).map((i: string) => bullet(i)),
-      ...(ai.eja.permanenciaExito || []).map((i: string) => bullet(i)),
     )
   }
 
   return await Packer.toBlob(docxDoc(children))
 }
 
-/* ── BUILD FICHA DOCX ────────────────────────────────────── */
 async function buildFichaDocx(ai: any, form: FichaForm) {
-  // Normalizar campos — a API pode retornar nomes ligeiramente diferentes
-  const nomeCurso    = ai.nome       || form.nome        || ''
-  const descricao    = ai.descricao  || ''
-  const cargaHoraria = ai.cargaHoraria || form.ch        || ''
-  const participantes= ai.participantes || ai.publicoAlvo || form.publico || ''
-  const certificado  = ai.certificado  || form.certificado || `Certificado de ${form.modalidade} em ${form.nome}`
-  const frequencia   = ai.frequencia   || form.frequencia  || '75%'
-  const programacao  = Array.isArray(ai.programacao) ? ai.programacao : []
+  const nomeCurso = ai.nome || form.nome || ''
+  const descricao = ai.descricao || ''
+  const cargaHoraria = ai.cargaHoraria || form.ch || ''
+  const participantes = ai.participantes || ai.publicoAlvo || form.publico || ''
+  const certificado = ai.certificado || form.certificado || `Certificado de ${form.modalidade} em ${form.nome}`
+  const frequencia = ai.frequencia || form.frequencia || '75%'
+  const programacao = Array.isArray(ai.programacao) ? ai.programacao : []
 
   const children: any[] = [
-    // Cabeçalho azul
     new Table({
       width: { size: TW, type: WidthType.DXA }, columnWidths: [TW],
       rows: [new TableRow({ children: [new TableCell({
@@ -475,7 +402,7 @@ export default function AppPage() {
       const q = query(collection(db, 'documentos', uid, 'gerados'), orderBy('criadoEm', 'desc'))
       const snap = await getDocs(q)
       setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() } as HistoryItem)))
-    } catch { /* firestore pode não estar configurado ainda */ }
+    } catch { /* silencioso */ }
   }
 
   async function saveToFirestore(tipo: string, nome: string, resultado: any) {
@@ -494,7 +421,6 @@ export default function AppPage() {
     return Boolean(ficha.nome.trim() && ficha.ch.trim())
   }, [mode, desc.nomeCurso, desc.cargaHoraria, ficha.nome, ficha.ch])
 
-  // Cálculo automático da carga horária total
   const chTotal = useMemo(() => {
     const base = parseInt(desc.cargaHoraria.replace(/[^0-9]/g, '')) || 0
     if (base === 0) return ''
@@ -534,6 +460,7 @@ export default function AppPage() {
   }
 
   async function generate() {
+    if (!ready) return
     setLoading(true); setLogs([]); setResultLabel('')
     try {
       log('Preparando dados...', 'ok')
@@ -582,8 +509,8 @@ export default function AppPage() {
     } finally {
       setLoading(false)
     }
- }
-}
+  }
+
   if (checking) return <main className="app-loading">Carregando...</main>
 
   return (
@@ -628,19 +555,11 @@ export default function AppPage() {
                 <div className="grid3">
                   <div className="field">
                     <label>Carga horária específica *</label>
-                    <input
-                      value={desc.cargaHoraria}
-                      onChange={e => setDesc({ ...desc, cargaHoraria: e.target.value })}
-                      placeholder="Ex: 176h"
-                    />
+                    <input value={desc.cargaHoraria} onChange={e => setDesc({ ...desc, cargaHoraria: e.target.value })} placeholder="Ex: 176h" />
                   </div>
                   <div className="field">
                     <label>Carga horária total</label>
-                    <input
-                      readOnly
-                      value={chTotal || '—'}
-                      style={{ background: 'var(--input-bg)', opacity: .8, cursor: 'default', fontWeight: 700, color: chTotal ? 'var(--senai-red)' : 'var(--muted)' }}
-                    />
+                    <input readOnly value={chTotal || '—'} style={{ background: 'var(--input-bg)', opacity: .8, cursor: 'default', fontWeight: 700, color: chTotal ? 'var(--senai-red)' : 'var(--muted)' }} />
                   </div>
                   <div className="field"><label>CBO/Ocupação</label><input value={desc.cbo} onChange={e => setDesc({ ...desc, cbo: e.target.value })} placeholder="Opcional" /></div>
                 </div>
@@ -722,10 +641,7 @@ export default function AppPage() {
               <div className="section-head">
                 <span>📋</span>
                 <div><h2>Histórico</h2><p>Documentos gerados e salvos no Firebase.</p></div>
-                <button
-                  onClick={deleteAllHistory}
-                  style={{ marginLeft: 'auto', background: 'none', border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '4px 12px', color: 'var(--senai-red)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
-                >
+                <button onClick={deleteAllHistory} style={{ marginLeft: 'auto', background: 'none', border: '1px solid rgba(200,16,46,.3)', borderRadius: 8, padding: '4px 12px', color: 'var(--senai-red)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
                   🗑️ Limpar tudo
                 </button>
               </div>
@@ -737,11 +653,7 @@ export default function AppPage() {
                       <div className="h-meta">{item.criadoEm?.toDate?.()?.toLocaleString('pt-BR') || '—'}</div>
                     </div>
                     <span className="h-type">{item.tipo}</span>
-                    <button
-                      onClick={() => deleteHistoryItem(item.id)}
-                      title="Apagar este registro"
-                      style={{ background: 'none', border: 'none', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16, padding: '0 4px', flexShrink: 0 }}
-                    >✕</button>
+                    <button onClick={() => deleteHistoryItem(item.id)} title="Apagar" style={{ background: 'none', border: 'none', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16, padding: '0 4px', flexShrink: 0 }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -800,4 +712,3 @@ function UploadCard({ fileName, text, onFile, onClear }: { fileName: string; tex
     </div>
   )
 }
-// v3.2 
