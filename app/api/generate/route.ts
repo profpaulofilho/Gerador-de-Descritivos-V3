@@ -25,7 +25,7 @@ function buildDescritivoPrompt(payload: any) {
 
 Crie um DESCRITIVO DE CURSO no padrão SENAI Bahia, robusto e tecnicamente coerente.
 
-ATENÇÃO: Retorne SOMENTE o JSON, sem nenhum texto antes ou depois. O JSON deve estar completo e válido do início ao fim.
+ATENÇÃO CRÍTICA: Retorne SOMENTE o JSON puro, sem nenhum texto antes ou depois, sem markdown, sem explicações. O JSON deve estar 100% completo e válido.
 
 DADOS DO CURSO:
 Nome: ${f.nomeCurso}
@@ -71,7 +71,7 @@ Retorne SOMENTE JSON válido, sem markdown, no formato:
   "eja":{"aplicar":${f.eja ? 'true' : 'false'},"diretrizes":"texto","atividadesAssincronas":["atividade"],"permanenciaExito":["ação"]}
 }
 
-Regras: não invente dados legais específicos sem indicar como referência institucional; use o documento enviado como base principal quando existir; mantenha linguagem formal, técnica e aplicável ao SENAI Bahia. Seja conciso nos textos para garantir que o JSON fique completo.`
+Regras: não invente dados legais específicos; use o documento enviado como base principal quando existir; mantenha linguagem formal, técnica e aplicável ao SENAI Bahia. Seja conciso para garantir JSON completo dentro do limite de tokens.`
 }
 
 function buildFichaPrompt(payload: any) {
@@ -79,7 +79,7 @@ function buildFichaPrompt(payload: any) {
   const docText = (payload.documentText || '').slice(0, 4000)
   return `Você é especialista SENAI Bahia. Crie uma FICHA DE PRODUTO de curso no padrão SENAI.
 
-ATENÇÃO: Retorne SOMENTE o JSON, sem nenhum texto antes ou depois. O JSON deve estar completo e válido do início ao fim.
+ATENÇÃO CRÍTICA: Retorne SOMENTE o JSON puro, sem nenhum texto antes ou depois, sem markdown, sem explicações.
 
 DADOS:
 Nome: ${f.nome}
@@ -107,7 +107,7 @@ Retorne SOMENTE JSON válido, sem markdown:
   "programacao":[{"modulo":"Nome do módulo (Xh)","topicos":["tópico 1","tópico 2"]}]
 }
 
-Use como modelo: descrição objetiva, carga horária, participantes, certificação e programação por módulos com carga horária. Seja conciso para garantir JSON completo.`
+Seja conciso para garantir JSON completo.`
 }
 
 function extractJson(text: string) {
@@ -127,14 +127,12 @@ function extractJson(text: string) {
     try { return JSON.parse(cleaned.slice(start, end + 1)) } catch {}
   }
 
-  // Tenta reparar JSON truncado adicionando fechamentos
+  // Tenta reparar JSON truncado
   if (start >= 0) {
     try {
       let partial = cleaned.slice(start)
-      // Remove última linha incompleta (provável corte no meio de uma string)
       const lastNewline = partial.lastIndexOf('\n')
       if (lastNewline > 0) partial = partial.slice(0, lastNewline)
-      // Fecha arrays e objetos abertos
       const opens = (partial.match(/\[/g) || []).length - (partial.match(/\]/g) || []).length
       const objOpens = (partial.match(/\{/g) || []).length - (partial.match(/\}/g) || []).length
       partial += ']'.repeat(Math.max(0, opens))
@@ -143,6 +141,9 @@ function extractJson(text: string) {
     } catch {}
   }
 
+  // ✅ NOVO: loga os primeiros e últimos 500 chars para diagnóstico no Vercel
+  console.error('JSON inválido — início:', cleaned.slice(0, 500))
+  console.error('JSON inválido — fim:', cleaned.slice(-500))
   throw new Error('A resposta da IA não veio em JSON válido.')
 }
 
@@ -155,14 +156,25 @@ export async function POST(req: Request) {
     const prompt = payload.mode === 'ficha' ? buildFichaPrompt(payload) : buildDescritivoPrompt(payload)
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const message = await anthropic.messages.create({
-      // Use claude-haiku-4-5 para velocidade (resolve timeout no plano Hobby)
-      // Para qualidade superior, defina ANTHROPIC_MODEL=claude-sonnet-4-6 no Vercel
       model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
-      // 6000 para descritivo (4096 cortava o JSON no meio), 2000 para ficha
       max_tokens: payload.mode === 'ficha' ? 2000 : 6000,
       messages: [{ role: 'user', content: prompt }],
     })
+
+    // ✅ NOVO: loga stop_reason para diagnóstico
+    console.log('stop_reason:', message.stop_reason)
+    console.log('uso de tokens:', JSON.stringify(message.usage))
+
     const text = message.content.map((c: any) => c.type === 'text' ? c.text : '').join('\n')
+
+    // ✅ NOVO: retorna erro descritivo com stop_reason se não for JSON
+    if (message.stop_reason === 'max_tokens') {
+      console.error('Resposta cortada por max_tokens. Tokens usados:', message.usage)
+      return NextResponse.json({
+        error: 'O descritivo gerado foi muito longo. Tente reduzir o número de UCs ou a carga horária.'
+      }, { status: 500 })
+    }
+
     const json = extractJson(text)
     return NextResponse.json({ result: json })
   } catch (error: any) {
