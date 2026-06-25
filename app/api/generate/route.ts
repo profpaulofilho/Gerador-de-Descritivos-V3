@@ -14,7 +14,8 @@ EJA Profissionalizante: oferta vinculada a cursos de Qualificação Profissional
 
 function buildDescritivoPrompt(payload: any) {
   const f = payload.form || {}
-  const docText = (payload.documentText || '').slice(0, 12000)
+  // ✅ CORRIGIDO: reduzido de 12000 para 4000 chars para evitar timeout
+  const docText = (payload.documentText || '').slice(0, 4000)
   const ucInstruction = f.ucs?.length
     ? `Use EXATAMENTE estas UCs técnicas: ${f.ucs.map((u: any, i: number) => `UC ${i + 1}: ${u.nome} (${u.ch || 'carga a definir'})`).join('; ')}`
     : f.numUC
@@ -74,7 +75,8 @@ Regras: não invente dados legais específicos sem indicar como referência inst
 
 function buildFichaPrompt(payload: any) {
   const f = payload.form || {}
-  const docText = (payload.documentText || '').slice(0, 12000)
+  // ✅ CORRIGIDO: reduzido de 12000 para 4000 chars para evitar timeout
+  const docText = (payload.documentText || '').slice(0, 4000)
   return `Você é especialista SENAI Bahia. Crie uma FICHA DE PRODUTO de curso no padrão SENAI.
 
 DADOS:
@@ -124,8 +126,10 @@ export async function POST(req: Request) {
     const prompt = payload.mode === 'ficha' ? buildFichaPrompt(payload) : buildDescritivoPrompt(payload)
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const message = await anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
-      max_tokens: payload.mode === 'ficha' ? 3500 : 8000,
+      // ✅ CORRIGIDO: claude-haiku-4-5 é 5-10x mais rápido, resolve timeout no plano Hobby
+      model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
+      // ✅ CORRIGIDO: max_tokens reduzido (era 8000/3500, estourava os 60s do Hobby)
+      max_tokens: payload.mode === 'ficha' ? 2000 : 4096,
       messages: [{ role: 'user', content: prompt }],
     })
     const text = message.content.map((c: any) => c.type === 'text' ? c.text : '').join('\n')
