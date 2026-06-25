@@ -14,7 +14,6 @@ EJA Profissionalizante: oferta vinculada a cursos de Qualificação Profissional
 
 function buildDescritivoPrompt(payload: any) {
   const f = payload.form || {}
-  // ✅ CORRIGIDO: reduzido de 12000 para 4000 chars para evitar timeout
   const docText = (payload.documentText || '').slice(0, 4000)
   const ucInstruction = f.ucs?.length
     ? `Use EXATAMENTE estas UCs técnicas: ${f.ucs.map((u: any, i: number) => `UC ${i + 1}: ${u.nome} (${u.ch || 'carga a definir'})`).join('; ')}`
@@ -25,6 +24,8 @@ function buildDescritivoPrompt(payload: any) {
   return `Você é especialista SENAI Bahia em MSEP, desenvolvimento de cursos e documentação pedagógica.
 
 Crie um DESCRITIVO DE CURSO no padrão SENAI Bahia, robusto e tecnicamente coerente.
+
+ATENÇÃO: Retorne SOMENTE o JSON, sem nenhum texto antes ou depois. O JSON deve estar completo e válido do início ao fim.
 
 DADOS DO CURSO:
 Nome: ${f.nomeCurso}
@@ -70,14 +71,15 @@ Retorne SOMENTE JSON válido, sem markdown, no formato:
   "eja":{"aplicar":${f.eja ? 'true' : 'false'},"diretrizes":"texto","atividadesAssincronas":["atividade"],"permanenciaExito":["ação"]}
 }
 
-Regras: não invente dados legais específicos sem indicar como referência institucional; use o documento enviado como base principal quando existir; mantenha linguagem formal, técnica e aplicável ao SENAI Bahia.`
+Regras: não invente dados legais específicos sem indicar como referência institucional; use o documento enviado como base principal quando existir; mantenha linguagem formal, técnica e aplicável ao SENAI Bahia. Seja conciso nos textos para garantir que o JSON fique completo.`
 }
 
 function buildFichaPrompt(payload: any) {
   const f = payload.form || {}
-  // ✅ CORRIGIDO: reduzido de 12000 para 4000 chars para evitar timeout
   const docText = (payload.documentText || '').slice(0, 4000)
   return `Você é especialista SENAI Bahia. Crie uma FICHA DE PRODUTO de curso no padrão SENAI.
+
+ATENÇÃO: Retorne SOMENTE o JSON, sem nenhum texto antes ou depois. O JSON deve estar completo e válido do início ao fim.
 
 DADOS:
 Nome: ${f.nome}
@@ -105,15 +107,42 @@ Retorne SOMENTE JSON válido, sem markdown:
   "programacao":[{"modulo":"Nome do módulo (Xh)","topicos":["tópico 1","tópico 2"]}]
 }
 
-Use como modelo: descrição objetiva, carga horária, participantes, certificação e programação por módulos com carga horária.`
+Use como modelo: descrição objetiva, carga horária, participantes, certificação e programação por módulos com carga horária. Seja conciso para garantir JSON completo.`
 }
 
 function extractJson(text: string) {
-  const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim()
+  const cleaned = text.trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```$/i, '')
+    .trim()
+
+  // Tenta parse direto
   try { return JSON.parse(cleaned) } catch {}
+
+  // Tenta extrair objeto JSON da resposta
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
-  if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1))
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(cleaned.slice(start, end + 1)) } catch {}
+  }
+
+  // Tenta reparar JSON truncado adicionando fechamentos
+  if (start >= 0) {
+    try {
+      let partial = cleaned.slice(start)
+      // Remove última linha incompleta (provável corte no meio de uma string)
+      const lastNewline = partial.lastIndexOf('\n')
+      if (lastNewline > 0) partial = partial.slice(0, lastNewline)
+      // Fecha arrays e objetos abertos
+      const opens = (partial.match(/\[/g) || []).length - (partial.match(/\]/g) || []).length
+      const objOpens = (partial.match(/\{/g) || []).length - (partial.match(/\}/g) || []).length
+      partial += ']'.repeat(Math.max(0, opens))
+      partial += '}'.repeat(Math.max(0, objOpens))
+      return JSON.parse(partial)
+    } catch {}
+  }
+
   throw new Error('A resposta da IA não veio em JSON válido.')
 }
 
@@ -126,10 +155,11 @@ export async function POST(req: Request) {
     const prompt = payload.mode === 'ficha' ? buildFichaPrompt(payload) : buildDescritivoPrompt(payload)
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const message = await anthropic.messages.create({
-      // ✅ CORRIGIDO: claude-haiku-4-5 é 5-10x mais rápido, resolve timeout no plano Hobby
+      // Use claude-haiku-4-5 para velocidade (resolve timeout no plano Hobby)
+      // Para qualidade superior, defina ANTHROPIC_MODEL=claude-sonnet-4-6 no Vercel
       model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
-      // ✅ CORRIGIDO: max_tokens reduzido (era 8000/3500, estourava os 60s do Hobby)
-      max_tokens: payload.mode === 'ficha' ? 2000 : 4096,
+      // 6000 para descritivo (4096 cortava o JSON no meio), 2000 para ficha
+      max_tokens: payload.mode === 'ficha' ? 2000 : 6000,
       messages: [{ role: 'user', content: prompt }],
     })
     const text = message.content.map((c: any) => c.type === 'text' ? c.text : '').join('\n')
