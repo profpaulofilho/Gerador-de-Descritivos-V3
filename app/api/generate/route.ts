@@ -25,7 +25,7 @@ function buildDescritivoPrompt(payload: any) {
 
 Crie um DESCRITIVO DE CURSO no padrão SENAI Bahia, robusto e tecnicamente coerente.
 
-ATENÇÃO CRÍTICA: Retorne SOMENTE o JSON puro, sem nenhum texto antes ou depois, sem markdown, sem explicações. O JSON deve estar 100% completo e válido.
+ATENÇÃO CRÍTICA: Retorne SOMENTE o JSON puro, sem nenhum texto antes ou depois, sem markdown, sem explicações. O JSON deve estar 100% completo e válido. Seja conciso em todos os campos de texto para caber dentro do limite de tokens.
 
 DADOS DO CURSO:
 Nome: ${f.nomeCurso}
@@ -56,22 +56,22 @@ ${docText || 'Não foi enviado documento norteador. Gere com base nos dados info
 Retorne SOMENTE JSON válido, sem markdown, no formato:
 {
   "tipo":"descritivo",
-  "justificativa":"2 a 4 parágrafos",
+  "justificativa":"2 parágrafos concisos",
   "objetivo":"objetivo geral do curso",
-  "descricao":"descrição do curso",
+  "descricao":"descrição do curso em 2 frases",
   "publicoAlvo":"público-alvo",
   "perfilSaida":["competência 1","competência 2","competência 3","competência 4","competência 5","competência 6"],
-  "metodologia":"metodologia MSEP SENAI com situações de aprendizagem, práticas e projeto integrador quando adequado",
+  "metodologia":"metodologia MSEP SENAI resumida",
   "perfilDocente":"formação e experiência recomendada",
-  "criteriosAvaliacao":"critérios de avaliação completos",
+  "criteriosAvaliacao":"critérios resumidos",
   "criteriosCertificacao":"critérios de certificação",
-  "modulos":[{"nome":"MÓDULO ESPECÍFICO I","chModulo":"Xh","ucs":[{"nome":"UC técnica","ch":"Xh","objetivo":"objetivo","capacidades":["capacidade"],"conhecimentos":["conhecimento"]}]}],
-  "infraestrutura":{"ambiente":["item"],"equipamentos":[["equipamento","quantidade"]],"softwares":["item"],"materiais":"texto","epis":["item"],"conectividade":["item"]},
-  "referencias":["referência"],
-  "eja":{"aplicar":${f.eja ? 'true' : 'false'},"diretrizes":"texto","atividadesAssincronas":["atividade"],"permanenciaExito":["ação"]}
+  "modulos":[{"nome":"MÓDULO ESPECÍFICO I","chModulo":"Xh","ucs":[{"nome":"UC técnica","ch":"Xh","objetivo":"objetivo","capacidades":["capacidade 1","capacidade 2"],"conhecimentos":["conhecimento 1","conhecimento 2"]}]}],
+  "infraestrutura":{"ambiente":["item"],"equipamentos":[["equipamento","qtd"]],"softwares":["item"],"materiais":"texto","epis":["item"],"conectividade":["item"]},
+  "referencias":["referência 1","referência 2"],
+  "eja":{"aplicar":${f.eja ? 'true' : 'false'},"diretrizes":"texto resumido","atividadesAssincronas":["atividade"],"permanenciaExito":["ação"]}
 }
 
-Regras: não invente dados legais específicos; use o documento enviado como base principal quando existir; mantenha linguagem formal, técnica e aplicável ao SENAI Bahia. Seja conciso para garantir JSON completo dentro do limite de tokens.`
+Regras: use o documento enviado como base principal; mantenha linguagem formal e técnica; limite capacidades a 3 por UC e conhecimentos a 4 por UC para manter JSON compacto.`
 }
 
 function buildFichaPrompt(payload: any) {
@@ -117,17 +117,14 @@ function extractJson(text: string) {
     .replace(/```$/i, '')
     .trim()
 
-  // Tenta parse direto
   try { return JSON.parse(cleaned) } catch {}
 
-  // Tenta extrair objeto JSON da resposta
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
   if (start >= 0 && end > start) {
     try { return JSON.parse(cleaned.slice(start, end + 1)) } catch {}
   }
 
-  // Tenta reparar JSON truncado
   if (start >= 0) {
     try {
       let partial = cleaned.slice(start)
@@ -141,7 +138,6 @@ function extractJson(text: string) {
     } catch {}
   }
 
-  // ✅ NOVO: loga os primeiros e últimos 500 chars para diagnóstico no Vercel
   console.error('JSON inválido — início:', cleaned.slice(0, 500))
   console.error('JSON inválido — fim:', cleaned.slice(-500))
   throw new Error('A resposta da IA não veio em JSON válido.')
@@ -156,18 +152,16 @@ export async function POST(req: Request) {
     const prompt = payload.mode === 'ficha' ? buildFichaPrompt(payload) : buildDescritivoPrompt(payload)
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const message = await anthropic.messages.create({
+      // ✅ Defina ANTHROPIC_MODEL=claude-sonnet-4-6 no Vercel para melhor qualidade
       model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
-      max_tokens: payload.mode === 'ficha' ? 2000 : 6000,
+      // ✅ 8000 para descritivo — necessário para JSON completo
+      max_tokens: payload.mode === 'ficha' ? 2000 : 8000,
       messages: [{ role: 'user', content: prompt }],
     })
 
-    // ✅ NOVO: loga stop_reason para diagnóstico
     console.log('stop_reason:', message.stop_reason)
     console.log('uso de tokens:', JSON.stringify(message.usage))
 
-    const text = message.content.map((c: any) => c.type === 'text' ? c.text : '').join('\n')
-
-    // ✅ NOVO: retorna erro descritivo com stop_reason se não for JSON
     if (message.stop_reason === 'max_tokens') {
       console.error('Resposta cortada por max_tokens. Tokens usados:', message.usage)
       return NextResponse.json({
@@ -175,6 +169,7 @@ export async function POST(req: Request) {
       }, { status: 500 })
     }
 
+    const text = message.content.map((c: any) => c.type === 'text' ? c.text : '').join('\n')
     const json = extractJson(text)
     return NextResponse.json({ result: json })
   } catch (error: any) {
